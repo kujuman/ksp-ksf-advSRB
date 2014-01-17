@@ -1,0 +1,97 @@
+Changelog
+Version		Date			Description
+v.1		July 1, 2013		Initial Release
+v.2		July 3, 2013		New features
+						A debug partmodule which creates .txt files in CSV format to calculate mass flow over time for booster segments
+						An Excel spreadsheet which may be useful with rocket designing. This feature is still WIP. It comes with the stock AdvSRB segments preloaded, and adding new segments is not too difficult
+						New textures on parts. The textures are also a WIP, but should be servicable until new models come
+						Added a new booster segment which provides high initial power and high end power, with low power in the middle (MaxQ throttle down)
+					Bug fixes/Tweaks
+						Fixed a condition in which segments could have a negative mass flow. Needless to say this is a bad thing
+						Fixed typo on right click menu.
+						Lowered dry mass of nose cones from .3 to .2
+v.3		July 4,2013		New Features
+						Added sound and visual effects-they scale with thrust output
+						Added 3 new action groupable actions to nozzles
+							-Ignite: Starts the AdvSRB
+							-Abort: drops Isp to 1/15 of "normal" value, simulating an abort mode where the throat is blown out to drastically reduce chamber pressure (it might be realistic...)
+							-Seperation Gimbal: Will attempt to gimbal engine 3deg (towards the red arrow at the bottom of the nozzle) to aid in booster seperation (this is kinda iffy right now)
+					Bug fixes/tweaks
+						fixed Isp not being correctly calculated for first 1km
+						Right click menu is now formated
+HOTFIX		July 4, 2013		Compatability with FAR fix
+v.4		July 10, 2013		New Features
+						Added launch clamp which fits underneath the SRB nozzle
+						Added "unplanned disassembly" effects. If the booster segments break apart while they are firing, they heat up and explode
+						Added the ability for nozzles to contain propellant (like default boosters)
+					Bug fixes/tweaks
+						Fixed "Ignite" action, previously only turned on effects
+						Gimbal Sepertion action:
+							Moved to a seperate module (use it on other engines!)
+							Gimbal movement now in .cfg, both X and Y movement
+							Fixed effects and nozzle not rotating during seperation
+						Nosecone mass flow reduced to help prevent turning SRBs into missles at burnout
+						Modified nozzle model to fit with new launch clamp
+						Changed Fuel density to be more in line with the rest of KSP
+						Restructured and rewrote code for probably a small increase in speed and reliability
+						Made more variables public for .cfg editing
+							Nodes no longer must have specific names
+							Parts can be specified to be the "end" of a booster stack
+							FX can now be offset from the thrust transform
+v.5		September 13, 2013	Added GUI to the editor, which graphs each nozzle's thrust, mass of the stack (just those components which are KSF AdvSRB), and 'spare' thrust, ie that which can lift the remainder of your rocket.
+						-To bring up the GUI, hover your mouse over a nozzle (such that the nozzle icon on the staging bar is highlighted white) and press the 'Home' key. To close it, hover over the nozzle and press 'End' key.
+							*Occasionally, the GUI window will not appear. Saving and reloading the ship seems to make it work.
+							*If the GUI window has focus, you can't close it. To make it lose focus, just click outside the window area.
+							*The GUI is click through, so it's possible to inadvertantly click apart your vessel.
+						-To use the GUI, enter a number in seconds into the text box (the default is 200) and press 'Generate'. After a short pause, the image will update.
+						-The generated image shows the expected performance of your nozzle over time T+0 to the time you entered into the text box above.
+							*The elapsed time is shown along the bottom of the graph, with a vertical line every 10 seconds.
+							*The vertical axis is split into ten equal regions, seperated by nine horizontal lines.
+								+The left side of the lines are labeled in metric tons.
+								+The right side of the lines are labled in kilonewtons.
+							*Three lines are graphed
+								+The downward sloping line is the mass of the booster stack over time, (the stack is defined as including KSF AdvSRB parts). For it's scale, refer to the left side numbers.
+								+The top-most line is the total thrust produced by this nozzle over time. For its scale, refer to the left side numbers.
+								+The next lower line (generally upward sloping) is the total excess thrust of the stack. This is the (thrust of the stack) minus (the mass of the stack * 9.81).
+					Added new, larger parts
+						-New parts are 'B' size, and are 2 meter diameter (NOT 2.5m like Rockomax)
+							*1 B size nozzle
+							*1 B size segment (in two burn times)
+							*1 B size nose cone with parachute (initiating burns at two different times)
+							*1 B size to Rockomax adaptor. The adaptor has a built in decoupler and retrorockets which seperate it from whatever is above it.
+						-B size parts are MUCH higher thrust than the A size		
+
+
+These advanced solid rocket boosters (AdvSRB) are the pinnacle of modern engineering. Developed after accusations that current SRB designs were nothing more than “trash cans full ‘o boom”, the AdvSRB boasts many exciting features:
+-Stackable: Each AdvSRB Segment added to a booster stack increases the thrust of the entire stack.
+-Varying Thrust: By carefully shaping the propellant (or modifying the MassFlow floatcurve in the .cfg) you can change how quickly the propellant burns, exchanging burn time for thrust. Have thrust constant, reduce over time, or even decrease before increasing again!
+-Nosecones: Contain a small amount of propellant which fires at a set time, aiding booster separation. Also contains a parachute for safe splashdowns downrange!
+-Gimbaled Nozzles: Nozzles are gimbaled to help steer vessels. While they have no thrust of their own, their Isp helps determine the thrust for the entire stack.
+-Custom Resource: KSF_SRfuel does not flow, cannot be pumped, and burns evenly through the entire stack. Here at Kerbal Science Foundation we value your sanity, so 1 unit of this resource weighs 1mass unit. Easy!  And no more will “SRBs” be able to use fuel lines…you know who you are.
+-Fixed Burn Times: If mass flow is fixed at a set time, then how does Isp work? Thrust! Low Isp results in lower thrust than a higher Isp, just like on the fictional world of Earth!
+How to use: Attach as many AdvSRB segments as you would like one on top of the other. The height of the stack determines its thrust. At the bottom of the stack add an AdvSRB Nozzle. Without a nozzle, the segments are useless. The nozzle will only activate through the regular staging process, and its icon is the standard SRB icon. Note that there is no fuel gauge drawn in the staging stack, so you should use the right click “T+” indicator on the nozzles to determine how long they have been burning.
+
+
+
+Next Update
+v.6 will likely be focused on impelenting bug fixes and tweaks suggested by users.
+
+
+
+Features to be implemented before final release:
+-heat
+-Engine damage
+-Additional Booster Sizes and burn configurations
+-How-To guide, on how to develop your own models and parts (specific requirements)
+
+Features to be implemented if possible:
+-Enabling thrust/delta-V to be read by MechJeb and other popular addons
+-Auto struts
+Current known/suspected issues:
+-The game may allow you to save while the AdvSRBs are thrusting; I have not tested resuming this.
+-May not work correctly with mods installed (I think MechJeb and Kerbal Engineer will not evaluate the AdvSRBs correctly)
+-Segments MUST be placed the correct side up- a possible loop failure may cause the engine to not thrust, MassFlow to be excessive, or both.
+-Colliders can be fussy when placing parts
+As the pack is still in development, do not rely upon parts to remain available or function the same way after an update. I suspect that you will only use them for launch vehicles, so hopefully this will not be too much of an issue.
+
+SOURCE CODE is located in 'PrimaryClasses.cs'
