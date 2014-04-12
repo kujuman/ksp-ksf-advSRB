@@ -29,3 +29,14 @@ C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\Kerb
 C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\Kerbal Science Foundation\AdvSRB\Source Code\KSF_SolidRocketBooster\KSF_SolidRocketBooster\obj\Debug\KSF_SolidRocketBooster.pdb
 C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\Kerbal Science Foundation\AdvSRB\Source Code\KSF_SolidRocketBooster\KSF_SolidRocketBooster\obj\Debug\KSF_SolidRocketBooster.csprojResolveAssemblyReference.cache
 C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\Kerbal Science Foundation\AdvancedSRB\Source Code\KSF_SolidRocketBooster\KSF_SolidRocketBooster\bin\Debug\TDx.TDxInput.dll
+C:\Users\Daniel\Documents\GitHub\ksp-ksf-advSRB\AdvancedSRB\Source Code\KSF_SolidRocketBooster\KSF_SolidRocketBooster\bin\Debug\KSF_SolidRocketBooster.dll
+C:\Users\Daniel\Documents\GitHub\ksp-ksf-advSRB\AdvancedSRB\Source Code\KSF_SolidRocketBooster\KSF_SolidRocketBooster\bin\Debug\KSF_SolidRocketBooster.pdb
+C:\Users\Daniel\Documents\GitHub\ksp-ksf-advSRB\AdvancedSRB\Source Code\KSF_SolidRocketBooster\KSF_SolidRocketBooster\bin\Debug\Assembly-CSharp.dll
+C:\Users\Daniel\Documents\GitHub\ksp-ksf-advSRB\AdvancedSRB\Source Code\KSF_SolidRocketBooster\KSF_SolidRocketBooster\bin\Debug\UnityEngine.dll
+C:\Users\Daniel\Documents\GitHub\ksp-ksf-advSRB\AdvancedSRB\Source Code\KSF_SolidRocketBooster\KSF_SolidRocketBooster\bin\Debug\Mono.Cecil.dll
+C:\Users\Daniel\Documents\GitHub\ksp-ksf-advSRB\AdvancedSRB\Source Code\KSF_SolidRocketBooster\KSF_SolidRocketBooster\bin\Debug\Assembly-CSharp-firstpass.dll
+C:\Users\Daniel\Documents\GitHub\ksp-ksf-advSRB\AdvancedSRB\Source Code\KSF_SolidRocketBooster\KSF_SolidRocketBooster\bin\Debug\TDx.TDxInput.dll
+C:\Users\Daniel\Documents\GitHub\ksp-ksf-advSRB\AdvancedSRB\Source Code\KSF_SolidRocketBooster\KSF_SolidRocketBooster\bin\Debug\Mono.Security.dll
+C:\Users\Daniel\Documents\GitHub\ksp-ksf-advSRB\AdvancedSRB\Source Code\KSF_SolidRocketBooster\KSF_SolidRocketBooster\obj\Debug\KSF_SolidRocketBooster.csprojResolveAssemblyReference.cache
+C:\Users\Daniel\Documents\GitHub\ksp-ksf-advSRB\AdvancedSRB\Source Code\KSF_SolidRocketBooster\KSF_SolidRocketBooster\obj\Debug\KSF_SolidRocketBooster.dll
+C:\Users\Daniel\Documents\GitHub\ksp-ksf-advSRB\AdvancedSRB\Source Code\KSF_SolidRocketBooster\KSF_SolidRocketBooster\obj\Debug\KSF_SolidRocketBooster.pdb

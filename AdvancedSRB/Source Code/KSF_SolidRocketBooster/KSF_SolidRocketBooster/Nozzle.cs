@@ -117,6 +117,9 @@ namespace KSF_SolidRocketBooster
 
         [KSPField]
         public float resourceDensity = .00975f;
+        
+        [KSPField]
+        public string resourceName = "SolidFuel";
 
         [KSPField]
         public string effectGroupName = "running";
@@ -188,27 +191,6 @@ namespace KSF_SolidRocketBooster
 
         private bool isExploding;
 
-
-        //New Effects System
-
-        //[KSPField]
-        //public float effectRunningSpeed = 8.0f;
-
-        //[KSPField(isPersistant = true)]
-        //public float effectRunningPower = 0;
-
-        //[KSPField(isPersistant = true)]
-        //public float effectRunningPowerTarget = 0;
-
-        //[KSPField]
-        //public float effectRunningMaxPower = 1f;
-
-        //[KSPField]
-        //public float effectRunningMinPower = 0f;
-
-
-
-
         public override void OnAwake()
         {
             ////////////////////////////////////////////////////////////////////////////////gRunning = this.part.findFxGroup("running");
@@ -223,8 +205,13 @@ namespace KSF_SolidRocketBooster
 
             tThrustTransform = this.part.FindModelTransform(thrustTransform);
 
-            if (acISP == null)
-                acISP = new FloatCurve();
+            if (GetResourceDensity(resourceName) == -1.0f)
+               print("Problem getting density of " + resourceName);
+            else
+                resourceDensity = GetResourceDensity(resourceName);
+
+                if (acISP == null)
+                    acISP = new FloatCurve();
         }
 
         public override void OnStart(StartState state)
@@ -340,6 +327,19 @@ namespace KSF_SolidRocketBooster
             return false;
         }
 
+        private float GetResourceDensity(string ResourceName)
+        {
+            foreach (ConfigNode node in GameDatabase.Instance.GetConfigNodes("RESOURCE_DEFINITION"))
+            {
+                if (ResourceName == node.GetValues("name")[0])
+                {
+                    return float.Parse(node.GetValues("density")[0]);
+                }
+            }
+
+            return -1.0f;
+        }
+
 
         /// <summary>
         /// RunFuelFlow gets the fuel from the connected SRB segments and adds their mass flow to the nozzle. It also determines if there is fuel in the stack.
@@ -351,7 +351,7 @@ namespace KSF_SolidRocketBooster
             foreach (Part p in FuelSourcesList)
             {
                 KSF_SolidBoosterSegment srb = p.GetComponent<KSF_SolidBoosterSegment>();
-                notExhausted = (notExhausted | srb.isFuelRemaining());
+                notExhausted = (notExhausted | srb.isFuelRemaining(resourceName));
                 fMassFlow = Mathf.Max(0, srb.CalcMassFlow(fEngRunTime));
                 fFuelFlowMass += (p.RequestResource(sResourceType, (fMassFlow / resourceDensity) * TimeWarp.fixedDeltaTime)) * resourceDensity;
             }

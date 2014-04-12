@@ -36,12 +36,22 @@ namespace KSF_SolidRocketBooster
             }
         }
 
-        public bool isFuelRemaining()
+        public bool isFuelRemaining(string resourceName)
         {
-            if (this.part.GetResourceMass() > 0)
-                return true;
-            else
-                return false;
+            //if (this.part.GetResourceMass() > 0)
+            //    return true;
+            //else
+            //    return false;
+
+            foreach(PartResource pr in this.part.Resources.list)
+            {
+                if (pr.info.name == resourceName)
+                    if (pr.amount > 0)
+                        return true;
+                    else
+                        return false;
+            }
+            return false;
         }
 
         public float CalcMassFlow(float time)
