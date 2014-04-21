@@ -52,8 +52,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CharArray.cs" />
+    <Compile Include="EditorGUI.cs" />
     <Compile Include="KSFAutoSRB.cs" />
-    <Compile Include="KSF_AdvSRB_Editor.cs" />
+    <Compile Include="EditorController.cs" />
     <Compile Include="KSF_SnippetTester.cs" />
     <Compile Include="Nozzle.cs" />
     <Compile Include="Nozzle2.cs" />
@@ -64,7 +65,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>copy "$(TargetPath)" "C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\KerbalScienceFoundation\AdvSRB\Plugins"
+    <PostBuildEvent>copy "$(TargetPath)" "C:\Users\Daniel\Desktop\KSP_win\GameData\modParts\"
 </PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

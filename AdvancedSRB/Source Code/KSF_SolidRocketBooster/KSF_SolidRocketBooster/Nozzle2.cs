@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using UnityEngine;
 using KSP;
 
@@ -10,7 +8,7 @@ namespace KSF_SolidRocketBooster
     public class KSF_SBNozzle : PartModule
     {
         [KSPField]
-        public FloatCurve acISP;
+        public FloatCurve atmosphereCurve;
 
         [KSPField]
         private string thrustTransform = "thrustTransform";
@@ -61,11 +59,11 @@ namespace KSF_SolidRocketBooster
         //private FXGroup gFlameout;
 
         [KSPField]
-        public string topNode = "SRBtop";
+        public string topNode = "top";
 
 
-        System.Collections.Generic.List<Part> FuelSourcesList = new System.Collections.Generic.List<Part>(); //filled once during OnActivate, is the master list
-        System.Collections.Generic.List<Part> CurrentFuelSourcesList = new System.Collections.Generic.List<Part>(); //filled everytime the vehicle part count changes.
+        public System.Collections.Generic.List<Part> FuelSourcesList = new System.Collections.Generic.List<Part>(); //filled once during OnActivate, is the master list
+        public System.Collections.Generic.List<Part> CurrentFuelSourcesList = new System.Collections.Generic.List<Part>(); //filled everytime the vehicle part count changes.
 
         private int iVesselPartCount;
 
@@ -97,12 +95,12 @@ namespace KSF_SolidRocketBooster
             tThrustTransform = this.part.FindModelTransform(thrustTransform);
 
             if (GetResourceDensity(resourceName) == -1.0f)
-                print("Problem getting density of " + resourceName);
+                Debug.LogError("Problem getting density of " + resourceName);
             else
                 resourceDensity = GetResourceDensity(resourceName);
 
-            if (acISP == null)
-                acISP = new FloatCurve();
+            if (atmosphereCurve == null)
+                atmosphereCurve = new FloatCurve();
         }
 
 
@@ -121,7 +119,6 @@ namespace KSF_SolidRocketBooster
 
         public override void OnStart(StartState state)
         {
-
         }
 
 
@@ -237,9 +234,9 @@ namespace KSF_SolidRocketBooster
         private void CalcCurrentIsp()
         {
             if (hasAborted)
-                fCurrentIsp = acISP.Evaluate((float)FlightGlobals.getStaticPressure()) / 15f;
+                fCurrentIsp = atmosphereCurve.Evaluate((float)FlightGlobals.getStaticPressure()) / 15f;
             else
-                fCurrentIsp = acISP.Evaluate((float)FlightGlobals.getStaticPressure());
+                fCurrentIsp = atmosphereCurve.Evaluate((float)FlightGlobals.getStaticPressure());
         }
 
 
@@ -261,9 +258,13 @@ namespace KSF_SolidRocketBooster
         /// </summary>
         private void SRBIgnite()
         {
-            hasFired = true;
+            if (hasFired == false)
+            {
+                hasFired = true;
+                this.part.force_activate();
 
-            FuelStackSearcher(FuelSourcesList);
+                FuelStackSearcher(FuelSourcesList);
+            }
         }
 
 
@@ -321,7 +322,7 @@ namespace KSF_SolidRocketBooster
         /// So this sub basically finds all the valid fuel sources for the booster segment, it should work fine.
         /// </summary>
         /// <param name="pl"></param>
-        private void FuelStackSearcher(System.Collections.Generic.List<Part> pl)
+        public void FuelStackSearcher(System.Collections.Generic.List<Part> pl)
         {
             pl.Clear();
             i = 0;

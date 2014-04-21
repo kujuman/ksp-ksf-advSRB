@@ -6,27 +6,25 @@ namespace KSF_SolidRocketBooster
 {
     public class KSF_SolidBoosterSegment : PartModule
     {
-        //[KSPField(isPersistant = true)]
-        ////public FloatCurve MassFlow;
-
         [KSPField(isPersistant = true)]
         public string BurnProfile = "";
 
         public AnimationCurve MassFlow;
 
-        //[KSPField(isPersistant = true)]
-        //public KSFFloatCurve MassFlow;
+        [KSPField]
+        public float thrustVariation = .0f;
+
+        [KSPField(guiName = "ThrustErr", guiActive = true, guiFormat = "F5")]
+        public float thrustError = 0;
 
         [KSPField]
-        public string topNode = "SRBtop";
+        public string topNode = "top";
 
         [KSPField]
         public bool endOfStack = false;
 
         [KSPField]
         public string GUIshortName;
-
-        //string[] keyData;
 
         public override void OnAwake()
         {
@@ -38,18 +36,19 @@ namespace KSF_SolidRocketBooster
 
         public bool isFuelRemaining(string resourceName)
         {
-            //if (this.part.GetResourceMass() > 0)
-            //    return true;
-            //else
-            //    return false;
-
             foreach(PartResource pr in this.part.Resources.list)
             {
                 if (pr.info.name == resourceName)
                     if (pr.amount > 0)
+                    {
+                        //Debug.Log("KSFAdvSRB:  " + part.name.ToString() + " " + resourceName.ToString() + " " + pr.amount.ToString());
                         return true;
+                    }
                     else
+                    {
+                        //Debug.Log("KSFAdvSRB:  " + part.name.ToString() + " " + resourceName.ToString() + " " + pr.amount.ToString());
                         return false;
+                    }
             }
             return false;
         }
@@ -58,19 +57,38 @@ namespace KSF_SolidRocketBooster
         {
             float f;
             f = MassFlow.Evaluate(time);
+
+            if (thrustVariation > .001f)
+                f = f * (1 + CalcMassFlux());
+
             if (f > 0)
                 return f;
             else
                 return 0;
         }
 
+        public float CalcMassFlux()
+        {
+            //System.Random r = new System.Random();
+
+            UnityEngine.Random ur = new UnityEngine.Random();
+
+            thrustError = (float)thrustError * .7f + UnityEngine.Random.Range(-1 * thrustVariation, thrustVariation) * .3f;
+
+            //thrustError += UnityEngine.Random.Range(-1 * thrustVariation, thrustVariation);
+
+            //Debug.Log("thrustError = " + thrustError);
+
+            //thrustError += r.Next(-1 * thrustVariation, thrustVariation);
+            return thrustError;
+        }
+
         public AnimationCurve AnimationCurveFromString(string s)
         {
-            print("In AnimationCurveFromString");
             AnimationCurve ac = new AnimationCurve();
             if (s == "")
             {
-                print(this.part.name + "No Burn Profile found! Defaulting to 60s constant burn rate.");
+                Debug.LogWarning(this.part.name + "No Burn Profile found! Defaulting to 60s constant burn rate.");
                 ac.AddKey(0, (float)(this.part.GetResourceMass() / 60));
                 return ac;
             }
