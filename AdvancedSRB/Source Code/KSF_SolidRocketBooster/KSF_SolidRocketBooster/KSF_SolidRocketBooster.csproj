@@ -65,7 +65,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>copy "$(TargetPath)" "C:\Users\Daniel\Desktop\KSP_win\GameData\modParts\"
+    <PostBuildEvent>copy "$(TargetPath)" "C:\Users\Daniel\Desktop\KSP DEV\GameData\modParts\"
 </PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -321,7 +321,7 @@ namespace KSF_SolidRocketBooster
         }
         
 
-        private void segmentGUI(KSF_SBNozzle nozzle)
+        public void segmentGUI(KSF_SBNozzle nozzle)
         {
             if (DebugDetail > 0)
                 Debug.Log("AdvSRB: in segmentGUI");
@@ -458,12 +458,22 @@ namespace KSF_SolidRocketBooster
                 {
                     System.Collections.Generic.List<Part> fSL = new System.Collections.Generic.List<Part>(); //filled once during OnActivate, is the master list
                     fSL.Add(segCurrentGUI);
-                    //segGraph = segThrustPredictPic(310, 490, Convert.ToInt16(simDuration), segCurrentGUI.GetComponent<KSF_SolidBoosterSegment>(), segCurrentGUI.GetResourceMass(), segCurrentGUI.mass, 5, 5, fSL);
+
+                    Debug.Log("Attempt to create new segGraph");
+
+                    segGraph = nozzle.segThrustPredictPic(310, 490, Convert.ToInt16(simDuration), segCurrentGUI.GetComponent<KSF_SolidBoosterSegment>(), segCurrentGUI.GetResourceMass(), segCurrentGUI.mass, 5, 5, fSL);
+
+
+                    Debug.Log("Post recreate segGraph");
+                    
                     refreshSegGraph = false; ;
                 }
+
+                Debug.Log("pre draw segGraph");
+
                 GUI.Box(new Rect(GUImainRect.xMin + 140, GUImainRect.yMin + 190, 510, 330), segGraph);
 
-
+                Debug.Log("post draw segGraph");
 
                 if (isAutoNode)
                 {

@@ -37,7 +37,6 @@ C:\Users\Daniel\Documents\GitHub\ksp-ksf-advSRB\AdvancedSRB\Source Code\KSF_Soli
 C:\Users\Daniel\Documents\GitHub\ksp-ksf-advSRB\AdvancedSRB\Source Code\KSF_SolidRocketBooster\KSF_SolidRocketBooster\bin\Debug\Assembly-CSharp-firstpass.dll
 C:\Users\Daniel\Documents\GitHub\ksp-ksf-advSRB\AdvancedSRB\Source Code\KSF_SolidRocketBooster\KSF_SolidRocketBooster\bin\Debug\TDx.TDxInput.dll
 C:\Users\Daniel\Documents\GitHub\ksp-ksf-advSRB\AdvancedSRB\Source Code\KSF_SolidRocketBooster\KSF_SolidRocketBooster\bin\Debug\Mono.Security.dll
-C:\Users\Daniel\Documents\GitHub\ksp-ksf-advSRB\AdvancedSRB\Source Code\KSF_SolidRocketBooster\KSF_SolidRocketBooster\obj\Debug\KSF_SolidRocketBooster.csprojResolveAssemblyReference.cache
 C:\Users\Daniel\Documents\GitHub\ksp-ksf-advSRB\AdvancedSRB\Source Code\KSF_SolidRocketBooster\KSF_SolidRocketBooster\obj\Debug\KSF_SolidRocketBooster.dll
 C:\Users\Daniel\Documents\GitHub\ksp-ksf-advSRB\AdvancedSRB\Source Code\KSF_SolidRocketBooster\KSF_SolidRocketBooster\obj\Debug\KSF_SolidRocketBooster.pdb
 C:\Users\Daniel\Documents\GitHub\ksp-ksf-advSRB\AdvancedSRB\Source Code\KSF_SolidRocketBooster\KSF_SolidRocketBooster\bin\Debug\Toolbar.dll
