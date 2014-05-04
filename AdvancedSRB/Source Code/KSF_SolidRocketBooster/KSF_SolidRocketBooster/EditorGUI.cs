@@ -273,7 +273,7 @@ namespace KSF_SolidRocketBooster
             }
 
 
-            GUI.Box(new Rect(GUImainRect.xMin + 10, GUImainRect.yMin + 40, 640, 480), stackGraph);//use this 4/20/14
+            //GUI.Box(new Rect(GUImainRect.xMin + 10, GUImainRect.yMin + 40, 640, 480), stackGraph);//use this 4/20/14
 
 
         }

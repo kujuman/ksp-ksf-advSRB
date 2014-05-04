@@ -5,6 +5,7 @@ using KSP;
 
 namespace KSF_SolidRocketBooster
 {
+    [KSPModule("SRB Nozzle")]
     public class KSF_SBNozzle : PartModule
     {
         KSF_CharArray Spacech = new KSF_CharArray();
@@ -68,6 +69,15 @@ namespace KSF_SolidRocketBooster
         [KSPField(guiActive = false, isPersistant = true)]
         private bool hasAborted = false;
 
+        [KSPField]
+        public float maxContThrust = 1000f;
+
+        [KSPField]
+        public float maxPeakThrust = 2000f;
+
+        [KSPField]
+        public bool useLegacyFX = false;
+
 
         private Part p;
         private bool bEndofFuelSearch;
@@ -75,8 +85,8 @@ namespace KSF_SolidRocketBooster
 
         private float fMassFlow = 0;
 
-        //private FXGroup gRunning;
-        //private FXGroup gFlameout;
+        private FXGroup gRunning;
+        private FXGroup gFlameout;
 
         [KSPField]
         public string topNode = "top";
@@ -89,6 +99,28 @@ namespace KSF_SolidRocketBooster
 
         private bool isExploding;
 
+
+        public override string GetInfo()
+        {
+            string displayInfo = "";
+
+            displayInfo += "<b><color=#99ff00ff>Propellant:</color></b>";
+
+            displayInfo += Environment.NewLine;
+            displayInfo += "-" + resourceName;
+
+            displayInfo += Environment.NewLine;
+            displayInfo += Environment.NewLine;
+            displayInfo += "Max Rated Continuous Thrust: " + maxContThrust.ToString("F1") + " kN";
+            displayInfo += Environment.NewLine;
+            displayInfo += "<color=#E03C31ff>Max Rated Peak Thrust: </color>" + maxPeakThrust.ToString("F1") + " kN";
+            displayInfo += Environment.NewLine;
+
+
+            displayInfo += "Isp: " + atmosphereCurve.Evaluate(1) + "s (Atm) - " + atmosphereCurve.Evaluate(0) + "s (Vac)";
+
+            return displayInfo;
+        }
 
 
         [KSPAction("Ignite")]
@@ -188,11 +220,11 @@ namespace KSF_SolidRocketBooster
         {
             float pwr = 0f;
 
-            if (notExhausted && hasFired)
-            {
+            if (hasFired && notExhausted)
                 pwr = Mathf.Clamp01((9.81f * fCurrentIsp * fFuelFlowMass) / fullEffectAtThrust);
-                part.Effect(effectGroupName, pwr);
-            }
+
+            if (useLegacyFX)
+                gRunning.SetPower(pwr);
             else
                 part.Effect(effectGroupName, pwr);
         }
@@ -284,6 +316,14 @@ namespace KSF_SolidRocketBooster
                 this.part.force_activate();
 
                 FuelStackSearcher(FuelSourcesList);
+
+                if (useLegacyFX)
+                {
+                    gRunning = this.part.findFxGroup("running");
+                    gFlameout = this.part.findFxGroup("flameout");
+
+                    gRunning.setActive(true);
+                }
             }
         }
 
@@ -293,9 +333,13 @@ namespace KSF_SolidRocketBooster
         /// </summary>
         private void SRBExtinguish()
         {
-            //gRunning.setActive(false);
-            //gRunning.audio.Stop();
-            //gFlameout.Burst();
+            if (useLegacyFX)
+            {
+                gRunning.setActive(false);
+                gRunning.audio.Stop();
+                gFlameout.Burst();
+            }
+            else
             part.Effect(effectGroupName, 0);
         }
 
@@ -305,6 +349,36 @@ namespace KSF_SolidRocketBooster
         /// </summary>
         private void HeatSegments()
         {
+            if (!isExploding)
+            {
+                this.part.temperature += (fForce * 600 / maxContThrust) * TimeWarp.fixedDeltaTime;
+
+                foreach (Part p in FuelSourcesList)
+                {
+                    if (p != this.part)
+                    {
+                        p.temperature += this.part.temperature += (fForce * 600 / maxContThrust) * TimeWarp.fixedDeltaTime;
+                    }
+                }
+
+                if (fForce > maxPeakThrust * 1.1) //110% of peak thrust rating
+                {
+                    System.Random r = new System.Random();
+
+                    if (r.NextDouble() > 0.90f)
+                    {
+                        foreach (Part p in FuelSourcesList)
+                        {
+                            if (p != this.part)
+                            {
+                                p.temperature += 10000;
+                            }
+                        }
+                        this.part.temperature += 10000;
+                    }
+                }
+            }
+
             if (isExploding)
             {
                 FuelSourcesList.RemoveAll(item => item == null);
@@ -335,6 +409,11 @@ namespace KSF_SolidRocketBooster
                     }
                 }
             }
+        }
+
+        private void heatCalculator()
+        {
+            ;
         }
 
         /// <summary>

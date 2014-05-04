@@ -4,12 +4,16 @@ using UnityEngine;
 
 namespace KSF_SolidRocketBooster
 {
+    [KSPModule("SRB Segment")]
     public class KSF_SolidBoosterSegment : PartModule
     {
         [KSPField(isPersistant = true)]
         public string BurnProfile = "";
 
         public AnimationCurve MassFlow;
+
+        [KSPField]
+        public int defaultBurnTime = 60;
 
         [KSPField]
         public float thrustVariation = .0f;
@@ -32,6 +36,25 @@ namespace KSF_SolidRocketBooster
             {
                 MassFlow = AnimationCurveFromString(BurnProfile);
             }
+        }
+
+        public override string GetInfo()
+        {
+            string displayInfo = "";
+
+            displayInfo += "Default Burn Time: " + defaultBurnTime + "s";
+
+            displayInfo += Environment.NewLine;
+
+            displayInfo += "End of Stack: " + endOfStack.ToString();
+            displayInfo += Environment.NewLine;
+
+            displayInfo += "Short Name: " + GUIshortName;
+            displayInfo += Environment.NewLine;
+
+            displayInfo += "Thrust Variation: " + (thrustVariation*100f).ToString("F1") + "%";
+
+            return displayInfo;
         }
 
         public bool isFuelRemaining(string resourceName)
@@ -78,8 +101,8 @@ namespace KSF_SolidRocketBooster
             AnimationCurve ac = new AnimationCurve();
             if (s == "")
             {
-                Debug.LogWarning(this.part.name + "No Burn Profile found! Defaulting to 60s constant burn rate.");
-                ac.AddKey(0, (float)(this.part.GetResourceMass() / 60));
+                Debug.LogWarning(this.part.name + "No Burn Profile found! Defaulting to constant burn rate.");
+                ac.AddKey(0, (float)(this.part.GetResourceMass() / defaultBurnTime));
                 return ac;
             }
             print(s);

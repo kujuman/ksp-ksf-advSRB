@@ -13,6 +13,7 @@ using System.Linq;
 
 namespace KSF_SolidRocketBooster
 {
+    [KSPModule("SRB Nozzle")]
     public class KSF_SolidBoosterNozzle : PartModule
     {
         #region Character arrays declaration
