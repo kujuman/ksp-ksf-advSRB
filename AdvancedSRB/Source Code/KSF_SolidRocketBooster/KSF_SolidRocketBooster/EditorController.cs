@@ -33,20 +33,9 @@ namespace KSF_SolidRocketBooster
 
         #endregion
 
-        #region variable declaration
-
-        //List<Part> lNozzles = new List<Part>();
-        //List<Part> lSegments = new List<Part>();
-        //List<Part> lShip = new List<Part>();
-        Vessel vInEditor;
-
-        #endregion
-
         public void ToggleController()
         {
             Debug.Log("AdvSRB: in ToggleController");
-
-            //FindAdvSRBNozzles();
 
             bEditorVisible = !bEditorVisible;
 
@@ -82,61 +71,6 @@ namespace KSF_SolidRocketBooster
         public void Awake()
         {
             Debug.Log("Rise and shine: AdvSRB Editor");
-            //KSF_AdvSRB_Editor();
         }
-
-        //void FindAdvSRBNozzles()
-        //{
-        //    lNozzles.Clear();
-
-        //    if (EditorLogic.startPod)
-        //        RecursePartList(lShip, EditorLogic.startPod);
-
-        //    foreach (Part p in lShip)
-        //    {
-        //        if (p.Modules.Contains("KSF_SBNozzle"))
-        //        {
-        //            if (lNozzles.Contains(p) != true)
-        //                lNozzles.Add(p);
-        //        }
-        //    }
-        //    lNozzles = ToSymmetryGroups(lNozzles);
-        //}
-
-        //private static void RecursePartList(List<Part> list, Part part) //taken from FAR by Ferram
-        //{
-        //    list.Add(part);
-        //    foreach (Part p in part.children)
-        //        RecursePartList(list, p);
-        //}
-
-        //List<Part> ToSymmetryGroups(List<Part> pl)
-        //{
-        //    List<Part> tpl;
-        //    bool restart = false;
-
-        //    tpl = pl;
-
-        //    Restart:
-
-        //    restart = false;
-
-        //    foreach(Part p in tpl)
-        //    {
-        //        foreach (Part sp in p.symmetryCounterparts)
-        //        {
-        //            if (tpl.Contains(sp))
-        //            {
-        //                tpl.Remove(sp);
-        //                restart = true;
-        //            }
-        //        }
-
-        //        if (restart)
-        //            goto Restart;
-        //    }
-
-        //    return tpl;
-        //}
     }
 }

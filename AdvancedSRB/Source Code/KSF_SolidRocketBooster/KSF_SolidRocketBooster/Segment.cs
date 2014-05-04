@@ -41,12 +41,10 @@ namespace KSF_SolidRocketBooster
                 if (pr.info.name == resourceName)
                     if (pr.amount > 0)
                     {
-                        //Debug.Log("KSFAdvSRB:  " + part.name.ToString() + " " + resourceName.ToString() + " " + pr.amount.ToString());
                         return true;
                     }
                     else
                     {
-                        //Debug.Log("KSFAdvSRB:  " + part.name.ToString() + " " + resourceName.ToString() + " " + pr.amount.ToString());
                         return false;
                     }
             }
@@ -58,7 +56,7 @@ namespace KSF_SolidRocketBooster
             float f;
             f = MassFlow.Evaluate(time);
 
-            if (thrustVariation > .001f)
+            if (thrustVariation > .0001f)
                 f = f * (1 + CalcMassFlux());
 
             if (f > 0)
@@ -69,17 +67,9 @@ namespace KSF_SolidRocketBooster
 
         public float CalcMassFlux()
         {
-            //System.Random r = new System.Random();
-
             UnityEngine.Random ur = new UnityEngine.Random();
 
             thrustError = (float)thrustError * .7f + UnityEngine.Random.Range(-1 * thrustVariation, thrustVariation) * .3f;
-
-            //thrustError += UnityEngine.Random.Range(-1 * thrustVariation, thrustVariation);
-
-            //Debug.Log("thrustError = " + thrustError);
-
-            //thrustError += r.Next(-1 * thrustVariation, thrustVariation);
             return thrustError;
         }
 

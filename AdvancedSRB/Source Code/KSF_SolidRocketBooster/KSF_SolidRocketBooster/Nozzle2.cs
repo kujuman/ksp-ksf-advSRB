@@ -266,7 +266,7 @@ namespace KSF_SolidRocketBooster
         /// </summary>
         private void DoApplyEngine()
         {
-            fForce = 9.81f * fCurrentIsp * fFuelFlowMass / TimeWarp.fixedDeltaTime;
+            fForce = 9.80665f * fCurrentIsp * fFuelFlowMass / TimeWarp.fixedDeltaTime;
             part.Rigidbody.AddForceAtPosition(tThrustTransform.forward * fForce * -1, this.part.rigidbody.position);
             fFuelFlowMass = fFuelFlowMass / TimeWarp.fixedDeltaTime;
         }
@@ -420,6 +420,304 @@ namespace KSF_SolidRocketBooster
 
         #endregion
 
+        /// <summary>
+        /// This will return an image of the specified size with the thrust graph for this nozzle
+        /// Totally jacked the image code from the wiki http://wiki.kerbalspaceprogram.com/wiki/Module_code_examples, with some modifications
+        /// 
+        /// 
+        /// </summary>
+        /// <param name="imgH">Hight of the desired output, in pixels</param>
+        /// <param name="imgW">Width of the desired output, in pixels</param>
+        /// <param name="burnTime">Chart for burn time in seconds</param>
+        /// <returns></returns>
+        public Texture2D stackThrustPredictPic(int imgH, int imgW, int burnTime, FloatCurve atmoCurve)
+        {
+            //First we set up the analyzer
+            //Step 1: Figure out fuel sources
+            FuelStackSearcher(FuelSourcesList);
+            //Step 2: Set up mass variables
+            float stackTotalMass = 0f;
+            stackTotalMass = CalcStackWetMass(FuelSourcesList, stackTotalMass);
+
+            float[] segmentFuelArray = new float[FuelSourcesList.Count];
+
+            int i = 0;
+            foreach (Part p in FuelSourcesList)
+            {
+                segmentFuelArray[i] = p.GetResourceMass();
+                i++;
+            }
+
+            //float stackCurrentMass = stackTotalMass;
+            //Now we set up the image maker
+            Texture2D image = new Texture2D(imgW, imgH);
+            int graphXmin = 19;
+            int graphXmax = imgW - 20;
+            int graphYmin = 19;
+            //Step 3: Set Up color variables
+            Color brightG = Color.black;
+            brightG.r = .3372549f;
+            brightG.g = 1;
+            Color mediumG = Color.black;
+            mediumG.r = 0.16862745f;
+            mediumG.g = .5f;
+            Color lowG = Color.black;
+            lowG.r = 0.042156863f;
+            lowG.g = .125f;
+
+            Color MassColor = Color.blue;
+            Color ThrustColor = Color.cyan;
+            Color ExtraThrustColor = Color.yellow;
+
+
+            //Step 4: Define text arrays
+            populateCharArrays();
+            //Step 5a: Define time markings (every 10 seconds gets a verticle line)
+            System.Collections.Generic.List<int> timeLines = new System.Collections.Generic.List<int>();
+            double xScale = (imgW - 40) / (double)burnTime;
+            //print("xScale: " + xScale);
+            calcTimeLines((float)burnTime, 10, timeLines, (float)xScale, 20);
+            //Step 5b: Define vertical line markings (9 total to give 10 sections)
+            System.Collections.Generic.List<int> horzLines = new System.Collections.Generic.List<int>();
+            calcHorizLines(imgH - graphYmin, horzLines, 9, 20);
+            //Step 6: Clear the background
+
+            //Set all the pixels to black. If you don't do this the image contains random junk.
+            for (int y = 0; y < image.height; y++)
+            {
+                for (int x = 0; x < image.width; x++)
+                {
+                    image.SetPixel(x, y, Color.black);
+                }
+            }
+
+            //Step 7a: Draw Time Lines
+            for (int y = 0; y < image.height; y++)
+            {
+                for (int x = 0; x < image.width; x++)
+                {
+                    if (timeLines.Contains(x) && y > graphYmin)
+                        image.SetPixel(x, y, lowG);
+                }
+            }
+
+            //Step 7b: Draw Vert Lines
+            for (int y = 0; y < image.height; y++)
+            {
+                for (int x = 0; x < image.width; x++)
+                {
+                    if (horzLines.Contains(y) && x < graphXmax && x > graphXmin)
+                        image.SetPixel(x, y, lowG);
+                }
+            }
+
+
+            //Step 7c: Draw Bounding Lines
+            for (int y = 0; y < image.height; y++)
+            {
+                for (int x = 0; x < image.width; x++)
+                {
+                    if ((x == graphXmin | x == graphXmax) && (y > graphYmin | y == graphYmin))
+                        image.SetPixel(x, y, mediumG);
+
+                    if (y == graphYmin && graphXmax > x && graphXmin < x)
+                        image.SetPixel(x, y, mediumG);
+                }
+            }
+
+            //Step 8a: Populate graphArray
+            double simStep = .2;
+            i = 0;
+            //double peakThrustTime = 0;
+            double peakThrustAmt = 0;
+
+            //set up the array for the graphs
+            int graphArraySize = Convert.ToInt16(Convert.ToDouble(burnTime) / simStep);
+            double[,] graphArray = new double[graphArraySize, 4];
+
+
+            //one time setups
+            graphArray[i, 0] = stackMassFlow(FuelSourcesList, (float)(i * simStep), segmentFuelArray, simStep);
+            graphArray[i, 1] = stackTotalMass;
+            graphArray[i, 2] = 9.81 * atmoCurve.Evaluate(1) * graphArray[i, 0];
+            graphArray[i, 3] = graphArray[i, 2] - (graphArray[i, 1] * 9.81);
+
+
+            //fForce = 9.81f * fCurrentIsp * fFuelFlowMass / TimeWarp.fixedDeltaTime;
+            do
+            {
+                i++;
+                graphArray[i, 0] = stackMassFlow(FuelSourcesList, (float)(i * simStep), segmentFuelArray, simStep);
+                graphArray[i, 1] = graphArray[i - 1, 1] - (graphArray[i - 1, 0] * simStep);
+                graphArray[i, 2] = 9.81 * atmoCurve.Evaluate(1) * graphArray[i, 0];
+                graphArray[i, 3] = graphArray[i, 2] - (graphArray[i, 1] * 9.81);
+
+                if (graphArray[i, 2] > peakThrustAmt)
+                {
+                    peakThrustAmt = graphArray[i, 2];
+                    //peakThrustTime = i;
+                }
+                //print("generating params i=" + i + " peak at " + Convert.ToInt16(Convert.ToDouble(simDuration) / simStep));
+            } while (i + 1 < graphArraySize);
+
+            //Step 8b: Make scales for the y axis
+            double yScaleMass = 1;
+            double yScaleThrust = 1;
+            int usableY;
+            usableY = imgH - 20;
+
+            yScaleMass = usableY / (Mathf.CeilToInt((float)(graphArray[0, 1] / 10)) * 10);
+            float inter;
+            inter = (float)peakThrustAmt / 100;
+            //print("1: " + inter);
+            inter = Mathf.CeilToInt(inter);
+            //print("22: " + inter);
+            inter = inter * 100;
+            //print("3: " + inter);
+            inter = usableY / inter;
+            //print("4: " + inter);
+
+            yScaleThrust = inter;
+
+            //print(yScaleThrust + ":" + peakThrustAmt + ":" + usableY);
+
+            print("graphed scales");
+
+            //Step 8c: Graph the mass
+            int lineWidth = 3;
+            for (int x = graphXmin; x < graphXmax; x++)
+            {
+                int fx = fGraph(xScale, x - 20, yScaleMass, graphArray, simStep, graphArraySize, 1, 20);
+
+                for (int y = fx; y < fx + lineWidth; y++)
+                {
+                    image.SetPixel(x, y, MassColor);
+                }
+            }
+
+            //Step 8d: Graph the thrust
+            lineWidth = 3;
+            for (int x = graphXmin; x < graphXmax; x++)
+            {
+                int fx = fGraph(xScale, x - 20, yScaleThrust, graphArray, simStep, graphArraySize, 2, 20);
+                for (int y = fx; y < fx + lineWidth; y++)
+                {
+                    image.SetPixel(x, y, ThrustColor);
+                }
+            }
+
+            //Step 8e: Graph the thrust extra
+            lineWidth = 3;
+            for (int x = graphXmin; x < graphXmax; x++)
+            {
+                int fx = fGraph(xScale, x - 20, yScaleThrust, graphArray, simStep, graphArraySize, 3, 20);
+                for (int y = fx; y < fx + lineWidth; y++)
+                {
+                    image.SetPixel(x, y, ExtraThrustColor);
+                }
+            }
+
+
+
+
+            //Step 9: Set up boxes for time
+
+            //int i = 0;
+            string s;
+            i = 0;
+            int length = 0;
+            int pos = 0;
+            int startpos = 0;
+            Texture2D tex;
+
+            do
+            {
+                s = "";
+
+                pos = timeLines[i];
+                i++;
+                s = i * 10 + " s";
+
+                //print("composite string: " + s);
+
+                length = calcStringPixLength(convertStringToCharArray(s));
+                //print("length: " + length);
+
+                startpos = Mathf.FloorToInt((float)pos - 0.5f * (float)length);
+
+                Color[] region = image.GetPixels(startpos, 23, length, 11);
+
+                for (int c = 0; c < region.Length; c++)
+                {
+                    region[c] = brightG;
+                }
+
+                image.SetPixels(startpos, 23, length, 11, region);
+
+                tex = convertCharArrayToTex(convertStringToCharArray(s), length, brightG);
+
+                Color[] region2 = tex.GetPixels();
+
+                image.SetPixels(startpos + 2, 25, length - 4, 7, region2);
+
+                length = 0;
+
+            } while (i < timeLines.Count);
+
+
+            //set up boxes for horizontal lines, mass first
+            startpos = 0;
+            length = 0;
+            pos = 0;
+            i = 0;
+            do
+            {
+                s = "";
+                pos = horzLines[i];
+                i++;
+                s = ((Mathf.CeilToInt((float)(graphArray[0, 1] / 10)) * i)).ToString() + " t";
+                length = calcStringPixLength(convertStringToCharArray(s));
+                startpos = Mathf.FloorToInt((float)pos - 5f);
+                Color[] region = image.GetPixels(23, startpos, length, 11);
+                for (int c = 0; c < region.Length; c++)
+                {
+                    region[c] = brightG;
+                }
+                image.SetPixels(23, startpos, length, 11, region);
+                tex = convertCharArrayToTex(convertStringToCharArray(s), length, brightG);
+                Color[] region2 = tex.GetPixels();
+                image.SetPixels(25, startpos + 2, length - 4, 7, region2);
+                length = 0;
+            } while (i < horzLines.Count);
+
+            //set up boxes for horizontal lines,  thrust
+            startpos = 0;
+            length = 0;
+            pos = 0;
+            i = 0;
+            do
+            {
+                s = "";
+                pos = horzLines[i];
+                i++;
+                s = ((Mathf.CeilToInt((float)(peakThrustAmt / 100)) * (i * 10))).ToString() + " k";
+                length = calcStringPixLength(convertStringToCharArray(s));
+                startpos = Mathf.FloorToInt((float)pos - 5f);
+                Color[] region = image.GetPixels(imgW - 60, startpos, length, 11);
+                for (int c = 0; c < region.Length; c++)
+                {
+                    region[c] = brightG;
+                }
+                image.SetPixels(imgW - 60, startpos, length, 11, region);
+                tex = convertCharArrayToTex(convertStringToCharArray(s), length, brightG);
+                Color[] region2 = tex.GetPixels();
+                image.SetPixels(imgW - 58, startpos + 2, length - 4, 7, region2);
+                length = 0;
+            } while (i < horzLines.Count);
+
+            image.Apply();
+            return image;
+        }
 
 
         /// <summary>

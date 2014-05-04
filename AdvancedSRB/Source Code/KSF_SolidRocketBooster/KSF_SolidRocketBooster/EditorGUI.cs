@@ -47,7 +47,7 @@ namespace KSF_SolidRocketBooster
         private string tbInTan;
         private string tbOutTan;
 
-        private bool isAutoNode = false;
+        private bool isAutoNode = true;
 
         private string lbMsgBox;
 
@@ -55,6 +55,8 @@ namespace KSF_SolidRocketBooster
         bool refreshSegGraph = true;
 
         private Texture2D segGraph;
+
+        private Texture2D stackGraph;
 
         private string klipboard;
 
@@ -206,22 +208,15 @@ namespace KSF_SolidRocketBooster
             }
 
             if (GUImodeInt == 2)
+            {
                 segmentGUI(lNozzles[iNozzles].GetComponent<KSF_SBNozzle>());
+            }
 
-
-
-            //DragWindow makes the window draggable. The Rect specifies which part of the window it can by dragged by, and is 
-            //clipped to the actual boundary of the window. You can also pass no argument at all and then the window can by
-            //dragged by any part of it. Make sure the DragWindow command is AFTER all your other GUI input stuff, or else
-            //it may "cover up" your controls and make them stop responding to the mouse.
             GUI.DragWindow(new Rect(0, 0, 10000, 20));
         }
 
         private void stackGUI()
         {
-            if (DebugDetail > 0)
-                Debug.Log("AdvSRB: in stackGUI");
-
             //this is the "Stack" mode of the GUI, as used in the first iteration of the GUI
 
             simDuration = GUI.TextField(new Rect(170 + GUImainRect.xMin, 10 + GUImainRect.yMin, 40, 20), simDuration);
@@ -229,38 +224,15 @@ namespace KSF_SolidRocketBooster
             GUI.Label(new Rect(GUImainRect.xMin + 10, GUImainRect.yMin + 10, 150, 20), "Simulation Run Time (s)");
 
 
-
-            if (DebugDetail > 1)
-                Debug.Log("AdvSRB: 1");
-
-         //FindAdvSRBNozzles();
-
          //set length of internal text box to be 50 pix per segment
          nozListLength = lNozzles.Count * 50;
 
-         ////automatically select first segment as current GUI
-         //if (lNozzles.Count > 0 && nozCurrentGUI == null)
-         //{
-         //    nozCurrentGUI = nozzle.FuelSourcesList[0];
-         //}
-
-         if (DebugDetail > 1)
-             Debug.Log("AdvSRB: 2");
             //**********************
             nozListVector = GUI.BeginScrollView(new Rect(GUImainRect.xMin + 10, GUImainRect.yMin + 10, 170, 450), nozListVector, new Rect(0, 0, 100, nozListLength));
 
             //GUI.Label(new Rect(15, 0, 100, 15), "Nozzle End");
             for (int i = 0; i < lNozzles.Count; i++)
             {
-                if(DebugDetail > 2)
-                    Debug.Log("Populating Nozzle list box");
-
-                //SRB = nozzle.FuelSourcesList[i].GetComponent<KSF_SolidBoosterSegment>();
-                //if (SRB.GUIshortName != "")
-                //    segGUIname = SRB.GUIshortName;
-                //else
-                //    segGUIname = "Unknown";
-
                 if (iNozzles == i)//next drawn button is the current stack
                 {
                     if (GUI.Button(new Rect(5, i * 50 + 5, 145, 40), "* " + lNozzles[i].name)) //argument used to be 5, i * 50 + 20, 95, 40
@@ -290,13 +262,18 @@ namespace KSF_SolidRocketBooster
 
             //************************
 
-            
 
-            //if (GUI.Button(new Rect(GUImainRect.xMin + 440, GUImainRect.yMin + 10, 200, 20), "Generate Thrust Graph"))
-            //{
-            ////    stackThrustPredictPic(480, 640, Convert.ToInt16(simDuration)); //do not use this line 4/20/14
-            //}
-            //GUI.Box(new Rect(GUImainRect.xMin + 10, GUImainRect.yMin + 40, 640, 480), "placeholder");//use this 4/20/14
+
+            if (GUI.Button(new Rect(GUImainRect.xMin + 440, GUImainRect.yMin + 10, 200, 20), "Generate Thrust Graph"))
+            {
+                KSF_SBNozzle nozzle;
+                nozzle = lNozzles[iNozzles].GetComponent<KSF_SBNozzle>();
+
+                stackGraph = nozzle.stackThrustPredictPic(480, 640, Convert.ToInt16(simDuration), nozzle.atmosphereCurve); //do not use this line 4/20/14
+            }
+
+
+            GUI.Box(new Rect(GUImainRect.xMin + 10, GUImainRect.yMin + 40, 640, 480), stackGraph);//use this 4/20/14
 
 
         }
@@ -388,7 +365,7 @@ namespace KSF_SolidRocketBooster
             GUI.EndScrollView();
 
 
-            if (GUI.Button(new Rect(GUImainRect.xMin + 10, GUImainRect.yMin + 450, 120, 20), "Apply to Symmetry"))
+            if (GUI.Button(new Rect(GUImainRect.xMin + 10, GUImainRect.yMin + 445, 120, 20), "Apply to Symmetry"))
             {
                 KSF_SolidBoosterSegment s;
                 KSF_SolidBoosterSegment sb;
@@ -402,7 +379,12 @@ namespace KSF_SolidRocketBooster
 
                     foreach(Part p in segCurrentGUI.symmetryCounterparts)
                     {
+                        Debug.Log("Symmetry Found! " + p.partName);
+
                         sb = p.GetComponent<KSF_SolidBoosterSegment>();
+
+                        sb.MassFlow = s.MassFlow;
+
                         sb.BurnProfile = s.BurnProfile;
                     }
                 }
@@ -458,22 +440,11 @@ namespace KSF_SolidRocketBooster
                 {
                     System.Collections.Generic.List<Part> fSL = new System.Collections.Generic.List<Part>(); //filled once during OnActivate, is the master list
                     fSL.Add(segCurrentGUI);
-
-                    Debug.Log("Attempt to create new segGraph");
-
                     segGraph = nozzle.segThrustPredictPic(310, 490, Convert.ToInt16(simDuration), segCurrentGUI.GetComponent<KSF_SolidBoosterSegment>(), segCurrentGUI.GetResourceMass(), segCurrentGUI.mass, 5, 5, fSL);
-
-
-                    Debug.Log("Post recreate segGraph");
-                    
                     refreshSegGraph = false; ;
                 }
 
-                Debug.Log("pre draw segGraph");
-
                 GUI.Box(new Rect(GUImainRect.xMin + 140, GUImainRect.yMin + 190, 510, 330), segGraph);
-
-                Debug.Log("post draw segGraph");
 
                 if (isAutoNode)
                 {
@@ -506,7 +477,7 @@ namespace KSF_SolidRocketBooster
 
                         SRB.BurnProfile = SRB.AnimationCurveToString(SRB.MassFlow);
 
-                        //refreshSegGraph = true;
+                        refreshSegGraph = true;
                     }
 
                 }
@@ -559,7 +530,7 @@ namespace KSF_SolidRocketBooster
                     if (segCurrentGUI != null && refreshNodeInfo)
                     {
                         SRB = segCurrentGUI.GetComponent<KSF_SolidBoosterSegment>();
-                        lbMsgBox = "The currently selected segment is " + SRB.GUIshortName + " and the current node is Node " + (nodeNumber + 1);
+                        //lbMsgBox = "The currently selected segment is " + SRB.GUIshortName + " and the current node is Node " + (nodeNumber + 1); //removed May 4, 2014: asterisks make redundant
 
                         tbTime = SRB.MassFlow.keys[nodeNumber].time.ToString();
                         tbValue = SRB.MassFlow.keys[nodeNumber].value.ToString();
@@ -581,17 +552,22 @@ namespace KSF_SolidRocketBooster
                         }
                     }
 
-                    GUI.Label(new Rect(GUImainRect.xMin + 140, GUImainRect.yMin + 60, 510, 15), lbMsgBox);
+                    
 
-                    GUI.Label(new Rect(GUImainRect.xMin + 162, GUImainRect.yMin + 80, 78, 15), "Node Time");
+                    GUI.Label(new Rect(GUImainRect.xMin + 162, GUImainRect.yMin + 80, 78, 15), "Node Time (s)");
                     GUI.Label(new Rect(GUImainRect.xMin + 292, GUImainRect.yMin + 80, 78, 15), "Node Value");
-                    GUI.Label(new Rect(GUImainRect.xMin + 422, GUImainRect.yMin + 80, 78, 15), "In Tangent");
+                    GUI.Label(new Rect(GUImainRect.xMin + 422, GUImainRect.yMin + 80, 78, 15), "In Tangent"); 
                     GUI.Label(new Rect(GUImainRect.xMin + 552, GUImainRect.yMin + 80, 78, 15), "Out Tangent");
 
                     tbTime = GUI.TextField(new Rect(140 + GUImainRect.xMin, 100 + GUImainRect.yMin, 120, 20), tbTime);
                     tbValue = GUI.TextField(new Rect(270 + GUImainRect.xMin, 100 + GUImainRect.yMin, 120, 20), tbValue);
                     tbInTan = GUI.TextField(new Rect(400 + GUImainRect.xMin, 100 + GUImainRect.yMin, 120, 20), tbInTan);
                     tbOutTan = GUI.TextField(new Rect(530 + GUImainRect.xMin, 100 + GUImainRect.yMin, 120, 20), tbOutTan);
+
+                    
+
+                    GUI.Label(new Rect(GUImainRect.xMin + 140, GUImainRect.yMin + 60, 510, 15), convertMassFlowToThrust(Convert.ToSingle(tbValue), nozzle.atmosphereCurve, lbMsgBox));
+
 
                     simDuration = GUI.TextField(new Rect(140 + GUImainRect.xMin, 160 + GUImainRect.yMin, 40, 20), simDuration);
                     GUI.Label(new Rect(GUImainRect.xMin + 190, GUImainRect.yMin + 160, 150, 20), "Simulation Run Time (s)");
@@ -673,7 +649,13 @@ namespace KSF_SolidRocketBooster
             }
         }
             
-
+        private string convertMassFlowToThrust(float MassFlow, FloatCurve atmosphereCurve, string msgOut)
+        {
+            msgOut = "";
+            msgOut = "Atmosphere thrust at this node is " + (9.80665f * atmosphereCurve.Evaluate(1) * MassFlow) + "kN, vacuum thrust is " + (9.80665f * atmosphereCurve.Evaluate(0) * MassFlow) + "kN";
+            return msgOut;
+            ;
+        }
 
 
 
