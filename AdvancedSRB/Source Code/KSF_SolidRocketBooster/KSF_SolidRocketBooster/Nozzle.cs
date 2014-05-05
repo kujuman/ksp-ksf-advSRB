@@ -1,9 +1,7 @@
-﻿
-/*
- * Kerbal Science Foundation Advanced Solid Rocket Booster v0.6 for Kerbal Space Program
- * Released September 13, 2013 under a Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License
- * For attribution, please attribute "Kujuman from the official KSP forums"
- * Portions of this work were based on example code posted at the KSP wiki. If you have something to contribute there, please do!
+﻿/*
+ * Kerbal Science Foundation Advanced Solid Rocket Booster v0.6.1 for Kerbal Space Program
+ * Released May 4, 2014 under a Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License
+ * For attribution, please attribute "kujuman"
  */
 
 using KSP;

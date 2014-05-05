@@ -1,4 +1,10 @@
-﻿using System;
+﻿/*
+ * Kerbal Science Foundation Advanced Solid Rocket Booster v0.6.1 for Kerbal Space Program
+ * Released May 4, 2014 under a Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License
+ * For attribution, please attribute "kujuman"
+ */
+
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using KSP;
@@ -351,15 +357,17 @@ namespace KSF_SolidRocketBooster
         {
             if (!isExploding)
             {
+                //this.part.temperature += (fForce * 600 / maxContThrust) * TimeWarp.fixedDeltaTime;
                 this.part.temperature += (fForce * 600 / maxContThrust) * TimeWarp.fixedDeltaTime;
 
-                foreach (Part p in FuelSourcesList)
+                if(this.part.temperature > .75 * this.part.maxTemp) //ensure maxContThrust is abided by
                 {
-                    if (p != this.part)
+                    if (fForce < 1.1 * maxContThrust)
                     {
-                        p.temperature += this.part.temperature += (fForce * 600 / maxContThrust) * TimeWarp.fixedDeltaTime;
+                        this.part.temperature -= 200 * TimeWarp.fixedDeltaTime;
                     }
                 }
+                
 
                 if (fForce > maxPeakThrust * 1.1) //110% of peak thrust rating
                 {
@@ -367,14 +375,14 @@ namespace KSF_SolidRocketBooster
 
                     if (r.NextDouble() > 0.90f)
                     {
-                        foreach (Part p in FuelSourcesList)
-                        {
-                            if (p != this.part)
-                            {
-                                p.temperature += 10000;
-                            }
-                        }
                         this.part.temperature += 10000;
+                    }
+                }
+                if (this.part.temperature > this.part.maxTemp) //explode stack
+                {
+                    foreach(Part p in FuelSourcesList)
+                    {
+                        p.temperature += 10000;
                     }
                 }
             }
