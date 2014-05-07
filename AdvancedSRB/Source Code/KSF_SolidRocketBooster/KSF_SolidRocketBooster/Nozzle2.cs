@@ -84,6 +84,7 @@ namespace KSF_SolidRocketBooster
         [KSPField]
         public bool useLegacyFX = false;
 
+        PartModule me;
 
         private Part p;
         private bool bEndofFuelSearch;
@@ -150,6 +151,8 @@ namespace KSF_SolidRocketBooster
 
         public override void OnAwake()
         {
+            Debug.Log("AdvSRB " + "101");
+
             tThrustTransform = this.part.FindModelTransform(thrustTransform);
 
             if (GetResourceDensity(resourceName) == -1.0f)
@@ -177,6 +180,7 @@ namespace KSF_SolidRocketBooster
 
         public override void OnStart(StartState state)
         {
+            Debug.Log("AdvSRB " + "100");
         }
 
 
@@ -184,6 +188,18 @@ namespace KSF_SolidRocketBooster
         {
             if (notExhausted) //the if is here to prevent SRBIgnite() being called when loading a scene (ie, if there are booster nozzles scattered around the KSC, they get forceactivated)
             {
+                Debug.Log("AdvSRB " + "0");
+                me = this.part.;
+                Debug.Log("AdvSRB " + "1");
+                me = new ModuleEngines();
+                Debug.Log("AdvSRB " + "2");
+                me.manuallyOverridden = true;
+                Debug.Log("AdvSRB " + "3");
+                me.thrustTransforms.Add(tThrustTransform);
+                Debug.Log("AdvSRB " + "4");
+                this.part.Modules.Add(me);
+                Debug.Log("AdvSRB " + "5");
+
                 isExploding = false;
                 SRBIgnite();
             }
@@ -196,8 +212,11 @@ namespace KSF_SolidRocketBooster
 
         #region SRB code which actually does stuff on the physical side
 
+        
+
         public override void OnFixedUpdate()
         {
+            Debug.Log("AdvSRB " + "16");
             HeatSegments();
             if (hasFired && notExhausted)
             {
@@ -224,6 +243,7 @@ namespace KSF_SolidRocketBooster
         /// </summary>
         public override void OnUpdate()
         {
+            Debug.Log("AdvSRB " + "15");
             float pwr = 0f;
 
             if (hasFired && notExhausted)
@@ -241,6 +261,7 @@ namespace KSF_SolidRocketBooster
         /// </summary>
         private void RunEngClock()
         {
+            Debug.Log("AdvSRB " + "17");
             fEngRunTime += TimeWarp.fixedDeltaTime;
         }
 
@@ -251,6 +272,7 @@ namespace KSF_SolidRocketBooster
         /// <returns>True or false depending upon if the part count of the vessel has changed</returns>
         private bool hasPartCountChanged()
         {
+            Debug.Log("AdvSRB " + "14");
             if (iVesselPartCount == 0)
             {
                 iVesselPartCount = vessel.parts.Count;
@@ -274,6 +296,7 @@ namespace KSF_SolidRocketBooster
         /// </summary>
         private void RunFuelFlow()
         {
+            Debug.Log("AdvSRB " + "13");
             notExhausted = false;
             fFuelFlowMass = 0f;
             foreach (Part p in FuelSourcesList)
@@ -291,6 +314,7 @@ namespace KSF_SolidRocketBooster
         /// </summary>
         private void CalcCurrentIsp()
         {
+            Debug.Log("AdvSRB " + "12");
             if (hasAborted)
                 fCurrentIsp = atmosphereCurve.Evaluate((float)FlightGlobals.getStaticPressure()) / 15f;
             else
@@ -304,9 +328,14 @@ namespace KSF_SolidRocketBooster
         /// </summary>
         private void DoApplyEngine()
         {
+            Debug.Log("AdvSRB " + "11");
             fForce = 9.80665f * fCurrentIsp * fFuelFlowMass / TimeWarp.fixedDeltaTime;
             part.Rigidbody.AddForceAtPosition(tThrustTransform.forward * fForce * -1, this.part.rigidbody.position);
             fFuelFlowMass = fFuelFlowMass / TimeWarp.fixedDeltaTime;
+
+
+            Debug.Log("AdvSRB " + "");
+            me.finalThrust = fForce;
         }
 
 
@@ -316,6 +345,7 @@ namespace KSF_SolidRocketBooster
         /// </summary>
         private void SRBIgnite()
         {
+            Debug.Log("AdvSRB " + "10");
             if (hasFired == false)
             {
                 hasFired = true;
