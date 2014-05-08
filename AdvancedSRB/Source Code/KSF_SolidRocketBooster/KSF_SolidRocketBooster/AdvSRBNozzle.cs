@@ -1,18 +1,14 @@
-﻿/*
- * Kerbal Science Foundation Advanced Solid Rocket Booster v0.6.1 for Kerbal Space Program
- * Released May 4, 2014 under a Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License
- * For attribution, please attribute "kujuman"
- */
-
-using System;
+﻿using System;
 using System.Collections.Generic;
-using UnityEngine;
+using System.Linq;
+using System.Text;
 using KSP;
+using UnityEngine;
 
 namespace KSF_SolidRocketBooster
 {
-    [KSPModule("SRB Nozzle")]
-    public class KSF_SBNozzle : PartModule
+    [KSPModule("aSRB Nozzle")]
+    public class AdvSRBNozzle : ModuleEnginesFX
     {
         KSF_CharArray Spacech = new KSF_CharArray();
         KSF_CharArray Sch = new KSF_CharArray();
@@ -35,13 +31,10 @@ namespace KSF_SolidRocketBooster
 
 
         [KSPField]
-        public FloatCurve atmosphereCurve;
+        new public FloatCurve atmosphereCurve;
 
         [KSPField]
         private string thrustTransform = "thrustTransform";
-
-        [KSPField]
-        public float resourceDensity = .00975f;
 
         [KSPField]
         public string resourceName = "SolidFuel";
@@ -55,18 +48,18 @@ namespace KSF_SolidRocketBooster
         private Transform tThrustTransform;
 
         [KSPField(isPersistant = true)]
-        private bool hasFired = false;
+        public bool hasFired = false;
 
         [KSPField(isPersistant = true)]
         private bool notExhausted = true;
 
-        [KSPField(guiName = "Isp", guiActive = true, guiFormat = "F2")]
+        [KSPField(guiName = "Isp", guiActive = false, guiFormat = "F2")]
         public float fCurrentIsp = 0f;
 
-        [KSPField(guiActive = true, guiName = "Force", guiUnits = " kN", guiFormat = "F2")]
-        public float fForce = 0f;
+        //[KSPField(guiActive = false, guiName = "Force", guiUnits = " kN", guiFormat = "F2")]
+        //public float finalThrust = 0f;
 
-        [KSPField(guiActive = true, guiName = "Fuel Mass Flow", guiUnits = " t/s", guiFormat = "F4")]
+        [KSPField(guiActive = false, guiName = "Fuel Mass Flow", guiUnits = " t/s", guiFormat = "F4")]
         private float fFuelFlowMass = 0f;
 
         [KSPField(isPersistant = true, guiActive = true, guiName = "T+", guiUnits = " s", guiFormat = "F2")]
@@ -81,8 +74,20 @@ namespace KSF_SolidRocketBooster
         [KSPField]
         public float maxPeakThrust = 2000f;
 
-        [KSPField]
+        //[KSPField]
         public bool useLegacyFX = false;
+
+        new string status;
+        new string statusL2;
+
+        [KSPField(guiActive = false)]
+        new float realIsp;
+
+        [KSPField(guiActive = false)]
+        new float fuelFlowGui;
+
+        [KSPField(guiActiveEditor = false, guiActive = false)]
+        new float thrustPercentage = 1;
 
 
         private Part p;
@@ -106,29 +111,6 @@ namespace KSF_SolidRocketBooster
         private bool isExploding;
 
 
-        public override string GetInfo()
-        {
-            string displayInfo = "";
-
-            displayInfo += "<b><color=#99ff00ff>Propellant:</color></b>";
-
-            displayInfo += Environment.NewLine;
-            displayInfo += "-" + resourceName;
-
-            displayInfo += Environment.NewLine;
-            displayInfo += Environment.NewLine;
-            displayInfo += "Max Rated Continuous Thrust: " + maxContThrust.ToString("F1") + " kN";
-            displayInfo += Environment.NewLine;
-            displayInfo += "<color=#E03C31ff>Max Rated Peak Thrust: </color>" + maxPeakThrust.ToString("F1") + " kN";
-            displayInfo += Environment.NewLine;
-
-
-            displayInfo += "Isp: " + atmosphereCurve.Evaluate(1) + "s (Atm) - " + atmosphereCurve.Evaluate(0) + "s (Vac)";
-
-            return displayInfo;
-        }
-
-
         [KSPAction("Ignite")]
         private void TryIgnite(KSPActionParam a)
         {
@@ -144,61 +126,15 @@ namespace KSF_SolidRocketBooster
             hasAborted = true;
         }
 
+        
 
 
 
-
-        public override void OnAwake()
-        {
-            tThrustTransform = this.part.FindModelTransform(thrustTransform);
-
-            if (GetResourceDensity(resourceName) == -1.0f)
-                Debug.LogError("Problem getting density of " + resourceName);
-            else
-                resourceDensity = GetResourceDensity(resourceName);
-
-            if (atmosphereCurve == null)
-                atmosphereCurve = new FloatCurve();
-        }
-
-
-        private float GetResourceDensity(string ResourceName)
-        {
-            foreach (ConfigNode node in GameDatabase.Instance.GetConfigNodes("RESOURCE_DEFINITION"))
-            {
-                if (ResourceName == node.GetValues("name")[0])
-                {
-                    return float.Parse(node.GetValues("density")[0]);
-                }
-            }
-
-            return -1.0f;
-        }
-
-        public override void OnStart(StartState state)
-        {
-        }
-
-
-        public override void OnActive()
-        {
-            if (notExhausted) //the if is here to prevent SRBIgnite() being called when loading a scene (ie, if there are booster nozzles scattered around the KSC, they get forceactivated)
-            {
-                isExploding = false;
-                SRBIgnite();
-            }
-        }
-
-        public override void OnInactive()
-        {
-
-        }
-
-        #region SRB code which actually does stuff on the physical side
 
         public override void OnFixedUpdate()
         {
             HeatSegments();
+            FixedUpdate();
             if (hasFired && notExhausted)
             {
                 if (hasPartCountChanged() && isExploding != true)
@@ -217,22 +153,14 @@ namespace KSF_SolidRocketBooster
                 if (notExhausted == false)
                     SRBExtinguish();
             }
+
+            fuelFlowGui = fFuelFlowMass / mixtureDensity;
+            realIsp = fCurrentIsp;
         }
 
-        /// <summary>
-        /// This runs once per graphics frame, so it should slightly reduce CPU workload on physX frames. It controls the runnning effects of the rocket.
-        /// </summary>
-        public override void OnUpdate()
+        new public void FixedUpdate()
         {
-            float pwr = 0f;
-
-            if (hasFired && notExhausted)
-                pwr = Mathf.Clamp01((9.81f * fCurrentIsp * fFuelFlowMass) / fullEffectAtThrust);
-
-            if (useLegacyFX)
-                gRunning.SetPower(pwr);
-            else
-                part.Effect(effectGroupName, pwr);
+            ;
         }
 
 
@@ -254,7 +182,6 @@ namespace KSF_SolidRocketBooster
             if (iVesselPartCount == 0)
             {
                 iVesselPartCount = vessel.parts.Count;
-                print("Initial Part count = " + iVesselPartCount);
                 return false;
             }
 
@@ -278,10 +205,10 @@ namespace KSF_SolidRocketBooster
             fFuelFlowMass = 0f;
             foreach (Part p in FuelSourcesList)
             {
-                KSF_SolidBoosterSegment srb = p.GetComponent<KSF_SolidBoosterSegment>();
+                AdvSRBSegment srb = p.GetComponent<AdvSRBSegment>();
                 notExhausted = (notExhausted | srb.isFuelRemaining(resourceName));
                 fMassFlow = Mathf.Max(0, srb.CalcMassFlow(fEngRunTime));
-                fFuelFlowMass += (p.RequestResource(resourceName, (fMassFlow / resourceDensity) * TimeWarp.fixedDeltaTime)) * resourceDensity;
+                fFuelFlowMass += (p.RequestResource(resourceName, (fMassFlow / mixtureDensity) * TimeWarp.fixedDeltaTime)) * mixtureDensity;
             }
         }
 
@@ -304,9 +231,42 @@ namespace KSF_SolidRocketBooster
         /// </summary>
         private void DoApplyEngine()
         {
-            fForce = 9.80665f * fCurrentIsp * fFuelFlowMass / TimeWarp.fixedDeltaTime;
-            part.Rigidbody.AddForceAtPosition(tThrustTransform.forward * fForce * -1, this.part.rigidbody.position);
+            //9.80665f * fCurrentIsp * fFuelFlowMass / TimeWarp.fixedDeltaTime;
+            //PreCalculateThrust();
+            finalThrust = 9.80665f * fCurrentIsp * fFuelFlowMass / TimeWarp.fixedDeltaTime;
+
+            maxThrust = finalThrust;
+            minThrust = maxThrust;
+
+
+            part.Rigidbody.AddForceAtPosition(tThrustTransform.forward * finalThrust * -1, this.part.rigidbody.position);
             fFuelFlowMass = fFuelFlowMass / TimeWarp.fixedDeltaTime;
+        }
+
+        private void PreCalculateThrust()
+        {
+            maxThrust = requestedThrust;
+            requestedThrust = 9.80665f * fCurrentIsp * fFuelFlowMass / TimeWarp.fixedDeltaTime;
+            fuelFlowGui = fuelFlowGui = fFuelFlowMass / mixtureDensity;
+        }
+
+        /// <summary>
+        /// This runs once per graphics frame, so it should slightly reduce CPU workload on physX frames. It controls the runnning effects of the rocket.
+        /// </summary>
+        override public void OnUpdate()
+        {
+            float pwr = 0f;
+
+            if (hasFired && notExhausted)
+                pwr = Mathf.Clamp01((finalThrust) / fullEffectAtThrust);
+
+            if (useLegacyFX)
+                gRunning.SetPower(pwr);
+            else
+                part.Effect(effectGroupName, pwr);
+
+            fuelFlowGui = fFuelFlowMass / mixtureDensity;
+            realIsp = fCurrentIsp;
         }
 
 
@@ -314,11 +274,14 @@ namespace KSF_SolidRocketBooster
         /// SRBIgnite() does a number of things
         /// 1. It sets some variables to let the nozzle know that the booster has been fired
         /// </summary>
-        private void SRBIgnite()
+        [KSPAction("IgniteA")]
+        new public void Activate()
         {
             if (hasFired == false)
             {
                 hasFired = true;
+                isEnabled = true;
+                EngineIgnited = true;
                 this.part.force_activate();
 
                 FuelStackSearcher(FuelSourcesList);
@@ -346,7 +309,7 @@ namespace KSF_SolidRocketBooster
                 gFlameout.Burst();
             }
             else
-            part.Effect(effectGroupName, 0);
+                part.Effect(effectGroupName, 0);
         }
 
 
@@ -358,18 +321,18 @@ namespace KSF_SolidRocketBooster
             if (!isExploding)
             {
                 //this.part.temperature += (fForce * 600 / maxContThrust) * TimeWarp.fixedDeltaTime;
-                this.part.temperature += (fForce * 600 / maxContThrust) * TimeWarp.fixedDeltaTime;
+                this.part.temperature += (finalThrust * 600 / maxContThrust) * TimeWarp.fixedDeltaTime;
 
-                if(this.part.temperature > .75 * this.part.maxTemp) //ensure maxContThrust is abided by
+                if (this.part.temperature > .75 * this.part.maxTemp) //ensure maxContThrust is abided by
                 {
-                    if (fForce < 1.1 * maxContThrust)
+                    if (finalThrust < 1.1 * maxContThrust)
                     {
                         this.part.temperature -= 200 * TimeWarp.fixedDeltaTime;
                     }
                 }
-                
 
-                if (fForce > maxPeakThrust * 1.1) //110% of peak thrust rating
+
+                if (finalThrust > maxPeakThrust * 1.1) //110% of peak thrust rating
                 {
                     System.Random r = new System.Random();
 
@@ -380,7 +343,7 @@ namespace KSF_SolidRocketBooster
                 }
                 if (this.part.temperature > this.part.maxTemp) //explode stack
                 {
-                    foreach(Part p in FuelSourcesList)
+                    foreach (Part p in FuelSourcesList)
                     {
                         p.temperature += 10000;
                     }
@@ -419,11 +382,6 @@ namespace KSF_SolidRocketBooster
             }
         }
 
-        private void heatCalculator()
-        {
-            ;
-        }
-
         /// <summary>
         /// This is the combined FuelStackSearch and FuelStackReSearch. It should be a bit more reliable as well as preventing me from updating one segment of code and not the other (which would likley lead to autonomus explosions)
         /// So this sub basically finds all the valid fuel sources for the booster segment, it should work fine.
@@ -438,17 +396,17 @@ namespace KSF_SolidRocketBooster
             p = this.part;
             AttachNode n = new AttachNode();
 
-            KSF_SolidBoosterSegment SRB = new KSF_SolidBoosterSegment();
+            AdvSRBSegment SRB = new AdvSRBSegment();
 
             p = this.part;
             n = p.findAttachNode(topNode);
 
-            if (p.Modules.Contains("KSF_SolidBoosterSegment"))
+            if (p.Modules.Contains("AdvSRBSegment"))
             {
                 if (pl.Contains(p) != true)
                     pl.Add(p);
 
-                SRB = p.GetComponent<KSF_SolidBoosterSegment>();
+                SRB = p.GetComponent<AdvSRBSegment>();
 
                 if (SRB.endOfStack)
                     goto Leave;
@@ -456,14 +414,14 @@ namespace KSF_SolidRocketBooster
 
             do
             {
-                if (n.attachedPart.Modules.Contains("KSF_SolidBoosterSegment"))
+                if (n.attachedPart.Modules.Contains("AdvSRBSegment"))
                 {
                     p = n.attachedPart;
 
                     if (pl.Contains(p) != true)
                         pl.Add(p);
 
-                    SRB = p.GetComponent<KSF_SolidBoosterSegment>();
+                    SRB = p.GetComponent<AdvSRBSegment>();
 
                     if (SRB.endOfStack != true)
                     {
@@ -505,7 +463,75 @@ namespace KSF_SolidRocketBooster
             ;
         }
 
-        #endregion
+        public override void OnActive()
+        {
+            if (notExhausted) //the if is here to prevent SRBIgnite() being called when loading a scene (ie, if there are booster nozzles scattered around the KSC, they get forceactivated)
+            {
+                isExploding = false;
+                Activate();
+
+
+
+                thrustTransforms.Clear();
+                thrustTransforms.Add(tThrustTransform);
+            }
+        }
+
+        public override void OnAwake()
+        {
+            tThrustTransform = this.part.FindModelTransform(thrustTransform);
+            //thrustTransforms.Clear();
+           // thrustTransforms.Add(tThrustTransform);
+
+            if (GetResourceDensity(resourceName) == -1.0f)
+                Debug.LogError("Problem getting density of " + resourceName);
+            else
+                mixtureDensity = GetResourceDensity(resourceName);
+
+            if (atmosphereCurve == null)
+                atmosphereCurve = new FloatCurve();
+        }
+
+        private float GetResourceDensity(string ResourceName)
+        {
+            foreach (ConfigNode node in GameDatabase.Instance.GetConfigNodes("RESOURCE_DEFINITION"))
+            {
+                if (ResourceName == node.GetValues("name")[0])
+                {
+                    return float.Parse(node.GetValues("density")[0]);
+                }
+            }
+            
+            return -1.0f;
+        }
+
+        public override string GetInfo()
+        {
+            string displayInfo = "";
+
+            displayInfo += "<b><color=#99ff00ff>Propellant:</color></b>";
+
+            displayInfo += Environment.NewLine;
+            displayInfo += "-" + resourceName;
+
+            displayInfo += Environment.NewLine;
+            displayInfo += Environment.NewLine;
+            displayInfo += "Max Rated Continuous Thrust: " + maxContThrust.ToString("F1") + " kN";
+            displayInfo += Environment.NewLine;
+            displayInfo += "<color=#E03C31ff>Max Rated Peak Thrust: </color>" + maxPeakThrust.ToString("F1") + " kN";
+            displayInfo += Environment.NewLine;
+
+
+            displayInfo += "Isp: " + atmosphereCurve.Evaluate(1) + "s (Atm) - " + atmosphereCurve.Evaluate(0) + "s (Vac)";
+
+            return displayInfo;
+        }
+
+        public override void OnLoad(ConfigNode node)
+        {
+            Debug.Log("Loading DerivedNozzle");
+        }
+
 
         /// <summary>
         /// This will return an image of the specified size with the thrust graph for this nozzle
@@ -813,11 +839,11 @@ namespace KSF_SolidRocketBooster
         /// <param name="imgH">Desired hieght of the image, in pixels</param>
         /// <param name="imgW">Desired width of the image, in pixels</param>
         /// <param name="burnTime">Length of time to simulate burn, in seconds</param>
-        /// <param name="AdvSRB_Module">the partmodule KSF_SolidBoosterSegment</param>
+        /// <param name="AdvSRB_Module">the partmodule AdvSRBSegment</param>
         /// <param name="fuelMass">mass of the SRB fuel on this segment, in KSP units</param>
         /// <param name="xOffset">margin on x axis (beginning and end)</param>
         /// <param name="yOffset">margin on y axis (bottom)</param>
-        public Texture2D segThrustPredictPic(int imgH, int imgW, int burnTime, KSF_SolidBoosterSegment AdvSRB_Module, float fuelMass, float dryMass, int xOffset, int yOffset, System.Collections.Generic.List<Part> fSL)
+        public Texture2D segThrustPredictPic(int imgH, int imgW, int burnTime, AdvSRBSegment AdvSRB_Module, float fuelMass, float dryMass, int xOffset, int yOffset, System.Collections.Generic.List<Part> fSL)
         {
             //Now we set up the image maker
             Texture2D image = new Texture2D(imgW, imgH);
@@ -1265,7 +1291,7 @@ namespace KSF_SolidRocketBooster
             float totalFlow = 0f;
             foreach (Part p in pl)
             {
-                KSF_SolidBoosterSegment srb = p.GetComponent<KSF_SolidBoosterSegment>();
+                AdvSRBSegment srb = p.GetComponent<AdvSRBSegment>();
 
                 if (a[i] > 0 && srb.CalcMassFlow(t) > 0)
                 {
@@ -1654,6 +1680,8 @@ namespace KSF_SolidRocketBooster
             cht.pixelList.Add(new Vector2(2, 0));
             cht.pixelList.Add(new Vector2(2, 3));
         }
+
+
 
     }
 }

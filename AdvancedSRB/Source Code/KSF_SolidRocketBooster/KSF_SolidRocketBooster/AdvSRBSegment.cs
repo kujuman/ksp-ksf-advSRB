@@ -12,7 +12,7 @@ using UnityEngine;
 namespace KSF_SolidRocketBooster
 {
     [KSPModule("SRB Segment")]
-    public class KSF_SolidBoosterSegment : PartModule
+    public class AdvSRBSegment : PartModule
     {
         [KSPField(isPersistant = true)]
         public string BurnProfile = "";

@@ -25,7 +25,7 @@ namespace KSF_SolidRocketBooster
         [KSPEvent(guiActive = true, guiName = "Analyze burn", active = true)]
         private void AnalyzeBurn()
         {
-            KSF_SolidBoosterSegment srb = this.part.GetComponent<KSF_SolidBoosterSegment>();
+            AdvSRBSegment srb = this.part.GetComponent<AdvSRBSegment>();
             {
                 i = 0;
                 sOutput += this.part.ToString() + "," + this.part.GetResourceMass() + Environment.NewLine;

@@ -98,7 +98,7 @@ namespace KSF_SolidRocketBooster
 
             foreach (Part p in lShip)
             {
-                if (p.Modules.Contains("KSF_SBNozzle"))
+                if (p.Modules.Contains("AdvSRBNozzle"))
                 {
                     if (lNozzles.Contains(p) != true)
                         lNozzles.Add(p);
@@ -182,7 +182,7 @@ namespace KSF_SolidRocketBooster
 
             if (GUImodeInt == 2)
             {
-                segmentGUI(lNozzles[iNozzles].GetComponent<KSF_SBNozzle>());
+                segmentGUI(lNozzles[iNozzles].GetComponent<AdvSRBNozzle>());
             }
 
             GUI.DragWindow(new Rect(0, 0, 10000, 20));
@@ -239,8 +239,8 @@ namespace KSF_SolidRocketBooster
 
             if (GUI.Button(new Rect(GUImainRect.xMin + 440, GUImainRect.yMin + 10, 200, 20), "Generate Thrust Graph"))
             {
-                KSF_SBNozzle nozzle;
-                nozzle = lNozzles[iNozzles].GetComponent<KSF_SBNozzle>();
+                AdvSRBNozzle nozzle;
+                nozzle = lNozzles[iNozzles].GetComponent<AdvSRBNozzle>();
 
                 stackGraph = nozzle.stackThrustPredictPic(480, 640, Convert.ToInt16(simDuration), nozzle.atmosphereCurve); //do not use this line 4/20/14
             }
@@ -271,14 +271,14 @@ namespace KSF_SolidRocketBooster
         }
         
 
-        public void segmentGUI(KSF_SBNozzle nozzle)
+        public void segmentGUI(AdvSRBNozzle nozzle)
         {
             if (DebugDetail > 0)
                 Debug.Log("AdvSRB: in segmentGUI");
 
             //this is the "Segment" mode of the GUI, which allows one to customize burn times for each segment
             string segGUIname = "";
-            KSF_SolidBoosterSegment SRB;
+            AdvSRBSegment SRB;
 
             //must populate the buttons with the most current fuel sources
             nozzle.FuelStackSearcher(nozzle.FuelSourcesList);
@@ -299,7 +299,7 @@ namespace KSF_SolidRocketBooster
             GUI.Label(new Rect(15, 0, 100, 15), "Nozzle End");
             for (int i = 0; i < nozzle.FuelSourcesList.Count; i++)
             {
-                SRB = nozzle.FuelSourcesList[i].GetComponent<KSF_SolidBoosterSegment>();
+                SRB = nozzle.FuelSourcesList[i].GetComponent<AdvSRBSegment>();
                 if (SRB.GUIshortName != "")
                     segGUIname = SRB.GUIshortName;
                 else
@@ -342,13 +342,13 @@ namespace KSF_SolidRocketBooster
 
             if (GUI.Button(new Rect(GUImainRect.xMin + 10, GUImainRect.yMin + 445, 120, 20), "Apply to Symmetry"))
             {
-                KSF_SolidBoosterSegment s;
-                KSF_SolidBoosterSegment sb;
+                AdvSRBSegment s;
+                AdvSRBSegment sb;
 
 
                 if (segCurrentGUI != null)
                 {
-                    s = segCurrentGUI.GetComponent<KSF_SolidBoosterSegment>();
+                    s = segCurrentGUI.GetComponent<AdvSRBSegment>();
 
                     
 
@@ -356,7 +356,7 @@ namespace KSF_SolidRocketBooster
                     {
                         Debug.Log("Symmetry Found! " + p.partName);
 
-                        sb = p.GetComponent<KSF_SolidBoosterSegment>();
+                        sb = p.GetComponent<AdvSRBSegment>();
 
                         sb.MassFlow = s.MassFlow;
 
@@ -389,7 +389,7 @@ namespace KSF_SolidRocketBooster
             //copy/paste functionality
             if (segCurrentGUI != null)
             {
-                SRB = segCurrentGUI.GetComponent<KSF_SolidBoosterSegment>();
+                SRB = segCurrentGUI.GetComponent<AdvSRBSegment>();
 
                 if (GUI.Button(new Rect(GUImainRect.xMin + 10, GUImainRect.yMin + 500, 55, 20), "Copy"))
                 {
@@ -409,13 +409,13 @@ namespace KSF_SolidRocketBooster
             int width = 0;
             if (segCurrentGUI != null)
             {
-                SRB = segCurrentGUI.GetComponent<KSF_SolidBoosterSegment>();
+                SRB = segCurrentGUI.GetComponent<AdvSRBSegment>();
                 width = SRB.MassFlow.length * 60;
                 if (refreshSegGraph)
                 {
                     System.Collections.Generic.List<Part> fSL = new System.Collections.Generic.List<Part>(); //filled once during OnActivate, is the master list
                     fSL.Add(segCurrentGUI);
-                    segGraph = nozzle.segThrustPredictPic(310, 490, Convert.ToInt16(simDuration), segCurrentGUI.GetComponent<KSF_SolidBoosterSegment>(), segCurrentGUI.GetResourceMass(), segCurrentGUI.mass, 5, 5, fSL);
+                    segGraph = nozzle.segThrustPredictPic(310, 490, Convert.ToInt16(simDuration), segCurrentGUI.GetComponent<AdvSRBSegment>(), segCurrentGUI.GetResourceMass(), segCurrentGUI.mass, 5, 5, fSL);
                     refreshSegGraph = false; ;
                 }
 
@@ -461,7 +461,7 @@ namespace KSF_SolidRocketBooster
                     nodeListVector = GUI.BeginScrollView(new Rect(GUImainRect.xMin + 140, GUImainRect.yMin + 10, 510, 40), nodeListVector, new Rect(0, 0, width + 70, 22));
                     if (segCurrentGUI != null)
                     {
-                        SRB = segCurrentGUI.GetComponent<KSF_SolidBoosterSegment>();
+                        SRB = segCurrentGUI.GetComponent<AdvSRBSegment>();
 
                         for (int i = 0; i < SRB.MassFlow.length + 1; i++)
                         {
@@ -504,7 +504,7 @@ namespace KSF_SolidRocketBooster
 
                     if (segCurrentGUI != null && refreshNodeInfo)
                     {
-                        SRB = segCurrentGUI.GetComponent<KSF_SolidBoosterSegment>();
+                        SRB = segCurrentGUI.GetComponent<AdvSRBSegment>();
                         //lbMsgBox = "The currently selected segment is " + SRB.GUIshortName + " and the current node is Node " + (nodeNumber + 1); //removed May 4, 2014: asterisks make redundant
 
                         tbTime = SRB.MassFlow.keys[nodeNumber].time.ToString();
@@ -550,7 +550,7 @@ namespace KSF_SolidRocketBooster
                     //save node changes
                     if (segCurrentGUI != null)
                     {
-                        SRB = segCurrentGUI.GetComponent<KSF_SolidBoosterSegment>();
+                        SRB = segCurrentGUI.GetComponent<AdvSRBSegment>();
                         if (GUI.Button(new Rect(GUImainRect.xMin + 490, GUImainRect.yMin + 160, 160, 20), "Save Changes to Node"))
                         {
                             Keyframe k = new Keyframe();
