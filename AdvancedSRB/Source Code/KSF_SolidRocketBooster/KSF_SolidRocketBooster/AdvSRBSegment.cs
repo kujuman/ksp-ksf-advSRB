@@ -86,8 +86,13 @@ namespace KSF_SolidRocketBooster
             float f;
             f = MassFlow.Evaluate(time);
 
-            if (thrustVariation > .0001f)
-                f = f * (1 + CalcMassFlux());
+            if(!HighLogic.LoadedSceneIsEditor)
+            {
+                if (thrustVariation > .0001f)
+                    f = f * (1 + CalcMassFlux());
+            }
+
+
 
             if (f > 0)
                 return f;

@@ -23,6 +23,16 @@ namespace KSF_SolidRocketBooster
 
         public abstract AnimationCurve computeCurve(FloatCurve Isp, Part segment);
 
+        public virtual bool useWithStack()
+        {
+            return false;
+        }
+
+        public virtual bool useWithSegment()
+        {
+            return true;
+        }
+
         public abstract void drawGUI(Rect baseRect);
     }
 
@@ -60,6 +70,15 @@ namespace KSF_SolidRocketBooster
         {
             GUI.Label(new Rect(baseRect.xMin + 350, baseRect.yMin + 60, 240, 20), "Enter Burn Time (s)");
             UIduration = Convert.ToSingle(GUI.TextField(new Rect(baseRect.xMin + 560, baseRect.yMin + 60, 50, 20), UIduration.ToString()));
+        }
+
+        public override bool useWithSegment()
+        {
+            return true;
+        }
+        public override bool useWithStack()
+        {
+            return true;
         }
     }
 
@@ -103,7 +122,19 @@ namespace KSF_SolidRocketBooster
             GUI.Label(new Rect(baseRect.xMin + 350, baseRect.yMin + 90, 240, 20), "Enter Atmospheric Density (0 -> 1)");
             UIAtmDen = Convert.ToSingle(GUI.TextField(new Rect(baseRect.xMin + 560, baseRect.yMin + 90, 50, 20), UIAtmDen.ToString()));
         }
+
+        public override bool useWithSegment()
+        {
+            return true;
+        }
+        public override bool useWithStack()
+        {
+            return false;
+        }
+
     }
+
+
 
     //=======================================================================================================================================================
 
@@ -152,6 +183,15 @@ namespace KSF_SolidRocketBooster
 
             GUI.Label(new Rect(baseRect.xMin + 350, baseRect.yMin + 90, 240, 20), "Enter Time to Start Burn (s)");
             UIstart = Convert.ToSingle(GUI.TextField(new Rect(baseRect.xMin + 560, baseRect.yMin + 90, 50, 20), UIstart.ToString()));
+        }
+
+        public override bool useWithSegment()
+        {
+            return true;
+        }
+        public override bool useWithStack()
+        {
+            return false;
         }
     }
 
@@ -203,6 +243,15 @@ namespace KSF_SolidRocketBooster
         {
             GUI.Label(new Rect(baseRect.xMin + 350, baseRect.yMin + 60, 240, 20), "Enter Burn Time (s)");
             UIduration = Convert.ToSingle(GUI.TextField(new Rect(baseRect.xMin + 560, baseRect.yMin + 60, 50, 20), UIduration.ToString()));
+        }
+
+        public override bool useWithSegment()
+        {
+            return true;
+        }
+        public override bool useWithStack()
+        {
+            return false;
         }
     }
 
@@ -265,6 +314,85 @@ namespace KSF_SolidRocketBooster
             UIgee = Convert.ToSingle(GUI.TextField(new Rect(baseRect.xMin + 560, baseRect.yMin + 90, 50, 20), UIgee.ToString()));
 
         }
+
+        public override bool useWithSegment()
+        {
+            return true;
+        }
+        public override bool useWithStack()
+        {
+            return false;
+        }
     }
 
+
+    //=======================================================================================================================================================
+
+    public class autoStack_ExtraThrustForExtraThrustAtGee : KSFAutoSRB
+    {
+        float UImass = 4;
+        float UIgee = 2;
+
+
+
+        public override string shortName()
+        {
+            return "Stack Mass At G";
+        }
+        public override string description()
+        {
+            return "Specify a target payload mass to lift at a certain constant(ish) acceleration";
+        }
+
+        public override AnimationCurve computeCurve(FloatCurve Isp, Part segment)
+        {
+            AnimationCurve ac = new AnimationCurve();
+            const float g = 9.80665f;
+            float duration;
+
+            //float deltaForce = ((segment.GetResourceMass() + segment.mass) * g * UIgee) - (segment.mass * g * UIgee);
+
+            Keyframe k1 = new Keyframe();
+            k1.time = 0;
+            k1.value = (((UImass + segment.GetResourceMass() + segment.mass) * g * UIgee) / Isp.Evaluate(0)) / g;
+
+            Keyframe k2 = new Keyframe();
+
+            k2.value = (((UImass + segment.mass) * g * UIgee) / Isp.Evaluate(0)) / g;
+
+            duration = segment.GetResourceMass() / (k2.value + 0.5f * (k1.value - k2.value));
+
+            k2.time = duration;
+
+            k1.outTangent = (k2.value - k1.value) / (k2.time - k1.time);
+            k2.inTangent = (k2.value - k1.value) / (k2.time - k1.time);
+
+            k1.inTangent = 0;
+            k2.outTangent = 0;
+
+            ac.AddKey(k1);
+            ac.AddKey(k2);
+
+            return ac;
+        }
+
+        public override void drawGUI(Rect baseRect)
+        {
+            GUI.Label(new Rect(baseRect.xMin + 350, baseRect.yMin + 60, 240, 20), "Enter Payload Mass(t)");
+            UImass = Convert.ToSingle(GUI.TextField(new Rect(baseRect.xMin + 560, baseRect.yMin + 60, 50, 20), UImass.ToString()));
+
+            GUI.Label(new Rect(baseRect.xMin + 350, baseRect.yMin + 90, 240, 20), "Enter Acceleration (g)");
+            UIgee = Convert.ToSingle(GUI.TextField(new Rect(baseRect.xMin + 560, baseRect.yMin + 90, 50, 20), UIgee.ToString()));
+
+        }
+
+        public override bool useWithSegment()
+        {
+            return false;
+        }
+        public override bool useWithStack()
+        {
+            return true;
+        }
+    }
 }

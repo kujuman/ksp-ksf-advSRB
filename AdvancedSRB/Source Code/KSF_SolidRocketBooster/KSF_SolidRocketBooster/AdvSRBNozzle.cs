@@ -5,6 +5,7 @@ using System.Text;
 using KSP;
 using UnityEngine;
 
+
 namespace KSF_SolidRocketBooster
 {
     [KSPModule("aSRB Nozzle")]
@@ -34,7 +35,7 @@ namespace KSF_SolidRocketBooster
         new public FloatCurve atmosphereCurve;
 
         [KSPField]
-        private string thrustTransform = "thrustTransform";
+        public string thrustTransform = "thrustTransform";
 
         [KSPField]
         public string resourceName = "SolidFuel";
@@ -45,7 +46,7 @@ namespace KSF_SolidRocketBooster
         [KSPField]
         public float fullEffectAtThrust = 300;
 
-        private Transform tThrustTransform;
+        //private Transform tThrustTransform;
 
         [KSPField(isPersistant = true)]
         public bool hasFired = false;
@@ -74,7 +75,7 @@ namespace KSF_SolidRocketBooster
         [KSPField]
         public float maxPeakThrust = 2000f;
 
-        //[KSPField]
+        [KSPField]
         public bool useLegacyFX = false;
 
         new string status;
@@ -88,7 +89,6 @@ namespace KSF_SolidRocketBooster
 
         [KSPField(guiActiveEditor = false, guiActive = false)]
         new float thrustPercentage = 1;
-
 
         private Part p;
         private bool bEndofFuelSearch;
@@ -149,6 +149,9 @@ namespace KSF_SolidRocketBooster
                 CalcCurrentIsp();
                 RunFuelFlow();
                 DoApplyEngine();
+
+                if (exhaustDamage)
+                    EngineExhaustDamage();
 
                 if (notExhausted == false)
                     SRBExtinguish();
@@ -231,23 +234,33 @@ namespace KSF_SolidRocketBooster
         /// </summary>
         private void DoApplyEngine()
         {
-            //9.80665f * fCurrentIsp * fFuelFlowMass / TimeWarp.fixedDeltaTime;
-            //PreCalculateThrust();
+            //Debug.Log("Before " + MethodBase.GetCurrentMethod().Name);//__ Requires System.Reflection
+
             finalThrust = 9.80665f * fCurrentIsp * fFuelFlowMass / TimeWarp.fixedDeltaTime;
 
             maxThrust = finalThrust;
             minThrust = maxThrust;
 
+            //Debug.Log(finalThrust);
+            //Debug.Log(tThrustTransform.forward.ToString()); //__ this breaks when useLegacyEffect = true
+            //Debug.Log(this.part.rigidbody.position.ToString());
 
-            part.Rigidbody.AddForceAtPosition(tThrustTransform.forward * finalThrust * -1, this.part.rigidbody.position);
+            //Debug.Log("Thrust Transform Count: " + thrustTransforms.Count());
+
+            if(thrustTransforms.Count() == 0)
+            {
+                GetThrustTransforms();
+                //Debug.Log("Transforms found: " + thrustTransforms.Count());
+            }
+
+            foreach(Transform t in thrustTransforms)
+            {
+                part.Rigidbody.AddForceAtPosition(t.forward * (finalThrust / thrustTransforms.Count()) * -1, this.part.rigidbody.position);
+            }
+
+
+
             fFuelFlowMass = fFuelFlowMass / TimeWarp.fixedDeltaTime;
-        }
-
-        private void PreCalculateThrust()
-        {
-            maxThrust = requestedThrust;
-            requestedThrust = 9.80665f * fCurrentIsp * fFuelFlowMass / TimeWarp.fixedDeltaTime;
-            fuelFlowGui = fuelFlowGui = fFuelFlowMass / mixtureDensity;
         }
 
         /// <summary>
@@ -255,6 +268,8 @@ namespace KSF_SolidRocketBooster
         /// </summary>
         override public void OnUpdate()
         {
+            //Debug.Log("thrustTransforms count = " + thrustTransforms.Count() + "OnUpdate");
+
             float pwr = 0f;
 
             if (hasFired && notExhausted)
@@ -274,25 +289,27 @@ namespace KSF_SolidRocketBooster
         /// SRBIgnite() does a number of things
         /// 1. It sets some variables to let the nozzle know that the booster has been fired
         /// </summary>
-        [KSPAction("IgniteA")]
-        new public void Activate()
+        public void Ignite()
         {
             if (hasFired == false)
             {
                 hasFired = true;
                 isEnabled = true;
                 EngineIgnited = true;
+
+                //Debug.Log("thrustTransforms count = " + thrustTransforms.Count() + "Ignite");
+
+
                 this.part.force_activate();
 
                 FuelStackSearcher(FuelSourcesList);
 
                 if (useLegacyFX)
                 {
-                    gRunning = this.part.findFxGroup("running");
-                    gFlameout = this.part.findFxGroup("flameout");
-
-                    gRunning.setActive(true);
+                        gRunning.setActive(true);
                 }
+
+                //Debug.Log("thrustTransforms count = " + thrustTransforms.Count() + "IgniteEnd");
             }
         }
 
@@ -468,20 +485,25 @@ namespace KSF_SolidRocketBooster
             if (notExhausted) //the if is here to prevent SRBIgnite() being called when loading a scene (ie, if there are booster nozzles scattered around the KSC, they get forceactivated)
             {
                 isExploding = false;
-                Activate();
+                Ignite();
+            }
+        }
 
+        private void GetThrustTransforms()
+        {
+            //Debug.Log("Looking for transforms: " + thrustTransform);
 
-
-                thrustTransforms.Clear();
-                thrustTransforms.Add(tThrustTransform);
+            thrustTransforms = new System.Collections.Generic.List<Transform>();
+            thrustTransforms.Clear();
+            foreach (Transform t in this.part.FindModelTransforms(thrustTransform))
+            {
+                thrustTransforms.Add(t);
             }
         }
 
         public override void OnAwake()
         {
-            tThrustTransform = this.part.FindModelTransform(thrustTransform);
-            //thrustTransforms.Clear();
-           // thrustTransforms.Add(tThrustTransform);
+            GetThrustTransforms();
 
             if (GetResourceDensity(resourceName) == -1.0f)
                 Debug.LogError("Problem getting density of " + resourceName);
@@ -490,6 +512,14 @@ namespace KSF_SolidRocketBooster
 
             if (atmosphereCurve == null)
                 atmosphereCurve = new FloatCurve();
+
+            if (useLegacyFX)
+            {
+                gRunning = this.part.findFxGroup("running");
+                gFlameout = this.part.findFxGroup("flameout");
+                gRunning.setActive(false);
+                gFlameout.setActive(false);
+            }
         }
 
         private float GetResourceDensity(string ResourceName)
@@ -529,7 +559,7 @@ namespace KSF_SolidRocketBooster
 
         public override void OnLoad(ConfigNode node)
         {
-            Debug.Log("Loading DerivedNozzle");
+            Debug.Log("Loading AdvSRBNozzle");
         }
 
 

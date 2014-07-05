@@ -9,11 +9,16 @@ using KSP;
 using UnityEngine;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+
+
 
 namespace KSF_SolidRocketBooster
 {
     public class EditorGUI : MonoBehaviour
     {
+
+
         private int DebugDetail = -100;
 
         protected Rect windowPos;
@@ -75,6 +80,7 @@ namespace KSF_SolidRocketBooster
         int iNozzles = 0;
         int isNozzles = 0;
         int iSegments = 0;
+
 
         public void FindAdvSRBNozzles()
         {
@@ -242,7 +248,7 @@ namespace KSF_SolidRocketBooster
                 AdvSRBNozzle nozzle;
                 nozzle = lNozzles[iNozzles].GetComponent<AdvSRBNozzle>();
 
-                stackGraph = nozzle.stackThrustPredictPic(480, 640, Convert.ToInt16(simDuration), nozzle.atmosphereCurve); //do not use this line 4/20/14
+                stackGraph = nozzle.stackThrustPredictPic(480, 640, Convert.ToInt16(simDuration), nozzle.atmosphereCurve);
             }
 
 
@@ -444,15 +450,36 @@ namespace KSF_SolidRocketBooster
 
                     autoTypeList[autoTypeCurrent].drawGUI(GUImainRect);
 
-
-                    //this is the button to compute the segment values
-                    if (GUI.Button(new Rect(GUImainRect.xMin + 500, GUImainRect.yMin + 160, 150, 20), "Evaluate"))
+                    if (autoTypeList[autoTypeCurrent].useWithSegment())
                     {
-                        SRB.MassFlow = autoTypeList[autoTypeCurrent].computeCurve(nozzle.atmosphereCurve, segCurrentGUI);
+                        //this is the button to compute the segment values
+                        if (GUI.Button(new Rect(GUImainRect.xMin + 500, GUImainRect.yMin + 140, 150, 20), "Evaluate for Segment"))
+                        {
+                            SRB.MassFlow = autoTypeList[autoTypeCurrent].computeCurve(nozzle.atmosphereCurve, segCurrentGUI);
 
-                        SRB.BurnProfile = SRB.AnimationCurveToString(SRB.MassFlow);
+                            SRB.BurnProfile = SRB.AnimationCurveToString(SRB.MassFlow);
 
-                        refreshSegGraph = true;
+                            refreshSegGraph = true;
+                        }
+                    }
+
+                    if (autoTypeList[autoTypeCurrent].useWithStack())
+                    {
+                        //this is the button to compute stack values
+                        if (GUI.Button(new Rect(GUImainRect.xMin + 500, GUImainRect.yMin + 170, 150, 20), "Evaluate for Stack"))
+                        {
+                            AdvSRBSegment s;
+
+                            foreach (Part p in nozzle.FuelSourcesList)
+                            {
+                                s = p.Modules.OfType<AdvSRBSegment>().FirstOrDefault();
+
+                                s.MassFlow = autoTypeList[autoTypeCurrent].computeCurve(nozzle.atmosphereCurve, p);
+                                s.BurnProfile = s.AnimationCurveToString(s.MassFlow);
+                            }
+
+                            refreshSegGraph = true;
+                        }
                     }
 
                 }
