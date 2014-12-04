@@ -21,7 +21,7 @@ namespace KSF_SolidRocketBooster
            return "no description";
         }
 
-        public abstract AnimationCurve computeCurve(FloatCurve Isp, Part segment);
+        public abstract AnimationCurve computeCurve(FloatCurve Isp, float propellantMass);
 
         public virtual bool useWithStack()
         {
@@ -51,11 +51,11 @@ namespace KSF_SolidRocketBooster
             return "Specify a target burn duration and this mode will set this booster to burn for constant thrust for that duration";
         }
 
-        public override AnimationCurve computeCurve(FloatCurve Isp, Part segment)
+        public override AnimationCurve computeCurve(FloatCurve Isp, float propellantMass)
         {
             AnimationCurve ac = new AnimationCurve();
             float fuelFlow;
-            fuelFlow = segment.GetResourceMass() / UIduration;
+            fuelFlow = 1 / UIduration;
 
             Keyframe k = new Keyframe();
             k.time = 0;
@@ -98,12 +98,14 @@ namespace KSF_SolidRocketBooster
             return "Set a target thrust at a certain atmospheric density";
         }
 
-        public override AnimationCurve computeCurve(FloatCurve Isp, Part segment)
+        public override AnimationCurve computeCurve(FloatCurve Isp, float propellantMass)
         {
             AnimationCurve ac = new AnimationCurve();
 
             float fuelFlow;
-            fuelFlow = UIthrust / (9.81f * Isp.Evaluate (UIAtmDen));
+            fuelFlow = UIthrust / (9.80661f * Isp.Evaluate (UIAtmDen));
+
+            fuelFlow = fuelFlow / propellantMass;
 
             Keyframe k = new Keyframe();
             k.time = 0;
@@ -129,7 +131,7 @@ namespace KSF_SolidRocketBooster
         }
         public override bool useWithStack()
         {
-            return false;
+            return true;
         }
 
     }
@@ -137,7 +139,7 @@ namespace KSF_SolidRocketBooster
 
 
     //=======================================================================================================================================================
-
+    /* depreciated
     public class autoSeg_ThrustAtTime : KSFAutoSRB
     {
         float UIthrust = 200;
@@ -152,7 +154,7 @@ namespace KSF_SolidRocketBooster
             return "Set a target thrust to begin after a certain period of time, useful for seperation segments";
         }
 
-        public override AnimationCurve computeCurve(FloatCurve Isp, Part segment)
+        public override AnimationCurve computeCurve(FloatCurve Isp, float propellantMass)
         {
             AnimationCurve ac = new AnimationCurve();
 
@@ -191,58 +193,121 @@ namespace KSF_SolidRocketBooster
         }
         public override bool useWithStack()
         {
-            return false;
+            return true;
         }
     }
+     */
+
 
     //=======================================================================================================================================================
 
     public class autoSeg_ExtraThrustForDuration : KSFAutoSRB
     {
-        float UIduration = 60;
+        const float g = 9.80665f;
+
+        float UIthrust = 200;
+        float UIAtmDen = 0.5f;
 
         public override string shortName()
         {
-            return "Extra Thrust for Duration";
+            return "Set Fixed (Rel) Thrust";
         }
         public override string description()
         {
-            return "Specify a target burn duration and this mode will set this booster to burn for constant excess thrust for that duration";
+            return "Set a target thrust at a certain atmospheric density";
         }
 
-        public override AnimationCurve computeCurve(FloatCurve Isp, Part segment)
+        public override AnimationCurve computeCurve(FloatCurve Isp, float propellantMass)
         {
             AnimationCurve ac = new AnimationCurve();
-            float avgFuelFlow = segment.GetResourceMass() / UIduration;
-            const float g = 9.80665f;
 
-            float avgThrust = ((Isp.Evaluate(0) + Isp.Evaluate(0)) * g * avgFuelFlow) / 2;
-            float deltaForce = ((segment.GetResourceMass() + segment.mass) * g) - (segment.mass * g);
+            float[] fuelFlow = new float[11];
 
-            Keyframe k1 = new Keyframe();
-            k1.time = 0;
-            k1.value = ((avgThrust + .5f * deltaForce) / Isp.Evaluate(0)) / g;
+            float deltaThrust;
+            float[] deltaDuration = new float[fuelFlow.Length - 1];
+            float[] fuelSlope = new float[fuelFlow.Length - 1];
+                        Keyframe[] k = new Keyframe[fuelFlow.Length];
 
-            Keyframe k2 = new Keyframe();
-            k2.time = UIduration;
-            k2.value = ((avgThrust - .5f * deltaForce) / Isp.Evaluate(0)) / g; ;
+            deltaThrust = propellantMass * g;
 
-            k1.outTangent = (k2.value - k1.value) / (k2.time - k1.time);
-            k2.inTangent = (k2.value - k1.value) / (k2.time - k1.time);
+            int i = 0;
+            do
+            {
+                float ffA = (UIthrust - (((float)i / deltaDuration.Length) * deltaThrust));
 
-            k1.inTangent = 0;
-            k2.outTangent = 0;
+                float ffB = (g * Isp.Evaluate(1 - ((float)i / fuelFlow.Length)));
 
-            ac.AddKey(k1);
-            ac.AddKey(k2);
+                fuelFlow[i] = (ffA/ffB)/propellantMass;
+
+                i++;
+            } while (i< fuelFlow.Length);
+
+            i = 0;
+
+            do
+            {
+                deltaThrust = fuelFlow[i] - fuelFlow[i+1];
+                deltaDuration[i] = 0.1f / (0.5f * deltaThrust + fuelFlow[i]);
+                fuelSlope[i] = -deltaThrust / deltaDuration[i];
+
+                i++;
+            } while (i < fuelFlow.Length -1);
+
+            i = 0;
+
+            float cumeDuration = 0;
+
+            do
+            {
+                //Debug.Log("do C: " + i);
+                switch (i)
+                {
+                    case 0:
+                        k[i].time = 0;
+                        k[i].value = fuelFlow[i];
+                        k[i].outTangent = fuelSlope[i];
+                        break;
+
+                    default:
+                        cumeDuration += deltaDuration[i - 1];
+
+                        k[i].time = cumeDuration;
+                        k[i].value = fuelFlow[i];
+                        k[i].inTangent =k[i-1].outTangent;
+
+                        if (i < fuelSlope.Length)
+                        {
+                            Debug.Log("i = " + i + "  fuelSlope[i] " + fuelSlope[i]);
+                            k[i].outTangent = fuelSlope[i];
+                        }
+                        else
+                        {
+                            k[i].outTangent = 0;
+                        }
+
+                        break;
+                }
+   
+
+                i++;
+            } while (i < k.Length);
+
+            foreach (Keyframe K in k)
+            {
+
+                ac.AddKey(K);
+            }
 
             return ac;
         }
 
         public override void drawGUI(Rect baseRect)
         {
-            GUI.Label(new Rect(baseRect.xMin + 350, baseRect.yMin + 60, 240, 20), "Enter Burn Time (s)");
-            UIduration = Convert.ToSingle(GUI.TextField(new Rect(baseRect.xMin + 560, baseRect.yMin + 60, 50, 20), UIduration.ToString()));
+            GUI.Label(new Rect(baseRect.xMin + 350, baseRect.yMin + 60, 240, 20), "Enter Desired Thrust (kN)");
+            UIthrust = Convert.ToSingle(GUI.TextField(new Rect(baseRect.xMin + 560, baseRect.yMin + 60, 50, 20), UIthrust.ToString()));
+
+            GUI.Label(new Rect(baseRect.xMin + 350, baseRect.yMin + 90, 240, 20), "Enter Atmospheric Density (0 -> 1)");
+            UIAtmDen = Convert.ToSingle(GUI.TextField(new Rect(baseRect.xMin + 560, baseRect.yMin + 90, 50, 20), UIAtmDen.ToString()));
         }
 
         public override bool useWithSegment()
@@ -251,148 +316,149 @@ namespace KSF_SolidRocketBooster
         }
         public override bool useWithStack()
         {
-            return false;
+            return true;
         }
+
     }
 
     //=======================================================================================================================================================
 
-    public class autoSeg_ExtraThrustForExtraThrustAtGee : KSFAutoSRB
-    {
-        float UImass = 4;
-        float UIgee = 2;
+    //public class autoSeg_ExtraThrustForExtraThrustAtGee : KSFAutoSRB
+    //{
+    //    float UImass = 4;
+    //    float UIgee = 2;
 
 
 
-        public override string shortName()
-        {
-            return "Lift Mass At G";
-        }
-        public override string description()
-        {
-            return "Specify a target payload mass to lift at a certain constant(ish) acceleration";
-        }
+    //    public override string shortName()
+    //    {
+    //        return "Lift Mass At G";
+    //    }
+    //    public override string description()
+    //    {
+    //        return "Specify a target payload mass to lift at a certain constant(ish) acceleration";
+    //    }
 
-        public override AnimationCurve computeCurve(FloatCurve Isp, Part segment)
-        {
-            AnimationCurve ac = new AnimationCurve();
-            const float g = 9.80665f;
-            float duration;
+    //    public override AnimationCurve computeCurve(FloatCurve Isp, float propellantMass)
+    //    {
+    //        AnimationCurve ac = new AnimationCurve();
+    //        const float g = 9.80665f;
+    //        float duration;
 
-            //float deltaForce = ((segment.GetResourceMass() + segment.mass) * g * UIgee) - (segment.mass * g * UIgee);
+    //        float deltaForce = ((segment.GetResourceMass() + segment.mass) * g * UIgee) - (segment.mass * g * UIgee);
 
-            Keyframe k1 = new Keyframe();
-            k1.time = 0;
-            k1.value = (((UImass + segment.GetResourceMass() + segment.mass) * g * UIgee) / Isp.Evaluate(0)) / g;
+    //        Keyframe k1 = new Keyframe();
+    //        k1.time = 0;
+    //        k1.value = (((UImass + segment.GetResourceMass() + segment.mass) * g * UIgee) / Isp.Evaluate(0)) / g;
 
-            Keyframe k2 = new Keyframe();
+    //        Keyframe k2 = new Keyframe();
 
-            k2.value = (((UImass + segment.mass) * g * UIgee) / Isp.Evaluate(0)) / g;
+    //        k2.value = (((UImass + segment.mass) * g * UIgee) / Isp.Evaluate(0)) / g;
 
-            duration = segment.GetResourceMass() / (k2.value + 0.5f * (k1.value - k2.value));
+    //        duration = segment.GetResourceMass() / (k2.value + 0.5f * (k1.value - k2.value));
 
-            k2.time = duration;
+    //        k2.time = duration;
 
-            k1.outTangent = (k2.value - k1.value) / (k2.time - k1.time);
-            k2.inTangent = (k2.value - k1.value) / (k2.time - k1.time);
+    //        k1.outTangent = (k2.value - k1.value) / (k2.time - k1.time);
+    //        k2.inTangent = (k2.value - k1.value) / (k2.time - k1.time);
 
-            k1.inTangent = 0;
-            k2.outTangent = 0;
+    //        k1.inTangent = 0;
+    //        k2.outTangent = 0;
 
-            ac.AddKey(k1);
-            ac.AddKey(k2);
+    //        ac.AddKey(k1);
+    //        ac.AddKey(k2);
 
-            return ac;
-        }
+    //        return ac;
+    //    }
 
-        public override void drawGUI(Rect baseRect)
-        {
-            GUI.Label(new Rect(baseRect.xMin + 350, baseRect.yMin + 60, 240, 20), "Enter Payload Mass(t)");
-            UImass = Convert.ToSingle(GUI.TextField(new Rect(baseRect.xMin + 560, baseRect.yMin + 60, 50, 20), UImass.ToString()));
+    //    public override void drawGUI(Rect baseRect)
+    //    {
+    //        GUI.Label(new Rect(baseRect.xMin + 350, baseRect.yMin + 60, 240, 20), "Enter Payload Mass(t)");
+    //        UImass = Convert.ToSingle(GUI.TextField(new Rect(baseRect.xMin + 560, baseRect.yMin + 60, 50, 20), UImass.ToString()));
 
-            GUI.Label(new Rect(baseRect.xMin + 350, baseRect.yMin + 90, 240, 20), "Enter Acceleration (g)");
-            UIgee = Convert.ToSingle(GUI.TextField(new Rect(baseRect.xMin + 560, baseRect.yMin + 90, 50, 20), UIgee.ToString()));
+    //        GUI.Label(new Rect(baseRect.xMin + 350, baseRect.yMin + 90, 240, 20), "Enter Acceleration (g)");
+    //        UIgee = Convert.ToSingle(GUI.TextField(new Rect(baseRect.xMin + 560, baseRect.yMin + 90, 50, 20), UIgee.ToString()));
 
-        }
+    //    }
 
-        public override bool useWithSegment()
-        {
-            return true;
-        }
-        public override bool useWithStack()
-        {
-            return false;
-        }
-    }
+    //    public override bool useWithSegment()
+    //    {
+    //        return true;
+    //    }
+    //    public override bool useWithStack()
+    //    {
+    //        return false;
+    //    }
+    //}
 
 
     //=======================================================================================================================================================
 
-    public class autoStack_ExtraThrustForExtraThrustAtGee : KSFAutoSRB
-    {
-        float UImass = 4;
-        float UIgee = 2;
+    //public class autoStack_ExtraThrustForExtraThrustAtGee : KSFAutoSRB
+    //{
+    //    float UImass = 4;
+    //    float UIgee = 2;
 
 
 
-        public override string shortName()
-        {
-            return "Stack Mass At G";
-        }
-        public override string description()
-        {
-            return "Specify a target payload mass to lift at a certain constant(ish) acceleration";
-        }
+    //    public override string shortName()
+    //    {
+    //        return "Stack Mass At G";
+    //    }
+    //    public override string description()
+    //    {
+    //        return "Specify a target payload mass to lift at a certain constant(ish) acceleration";
+    //    }
 
-        public override AnimationCurve computeCurve(FloatCurve Isp, Part segment)
-        {
-            AnimationCurve ac = new AnimationCurve();
-            const float g = 9.80665f;
-            float duration;
+    //    public override AnimationCurve computeCurve(FloatCurve Isp, float propellantMass)
+    //    {
+    //        AnimationCurve ac = new AnimationCurve();
+    //        const float g = 9.80665f;
+    //        float duration;
 
-            //float deltaForce = ((segment.GetResourceMass() + segment.mass) * g * UIgee) - (segment.mass * g * UIgee);
+    //        //float deltaForce = ((segment.GetResourceMass() + segment.mass) * g * UIgee) - (segment.mass * g * UIgee);
 
-            Keyframe k1 = new Keyframe();
-            k1.time = 0;
-            k1.value = (((UImass + segment.GetResourceMass() + segment.mass) * g * UIgee) / Isp.Evaluate(0)) / g;
+    //        Keyframe k1 = new Keyframe();
+    //        k1.time = 0;
+    //        k1.value = (((UImass + propellantMass + segment.mass) * g * UIgee) / Isp.Evaluate(0)) / g;
 
-            Keyframe k2 = new Keyframe();
+    //        Keyframe k2 = new Keyframe();
 
-            k2.value = (((UImass + segment.mass) * g * UIgee) / Isp.Evaluate(0)) / g;
+    //        k2.value = (((UImass + segment.mass) * g * UIgee) / Isp.Evaluate(0)) / g;
 
-            duration = segment.GetResourceMass() / (k2.value + 0.5f * (k1.value - k2.value));
+    //        duration = propellantMass / (k2.value + 0.5f * (k1.value - k2.value));
 
-            k2.time = duration;
+    //        k2.time = duration;
 
-            k1.outTangent = (k2.value - k1.value) / (k2.time - k1.time);
-            k2.inTangent = (k2.value - k1.value) / (k2.time - k1.time);
+    //        k1.outTangent = (k2.value - k1.value) / (k2.time - k1.time);
+    //        k2.inTangent = (k2.value - k1.value) / (k2.time - k1.time);
 
-            k1.inTangent = 0;
-            k2.outTangent = 0;
+    //        k1.inTangent = 0;
+    //        k2.outTangent = 0;
 
-            ac.AddKey(k1);
-            ac.AddKey(k2);
+    //        ac.AddKey(k1);
+    //        ac.AddKey(k2);
 
-            return ac;
-        }
+    //        return ac;
+    //    }
 
-        public override void drawGUI(Rect baseRect)
-        {
-            GUI.Label(new Rect(baseRect.xMin + 350, baseRect.yMin + 60, 240, 20), "Enter Payload Mass(t)");
-            UImass = Convert.ToSingle(GUI.TextField(new Rect(baseRect.xMin + 560, baseRect.yMin + 60, 50, 20), UImass.ToString()));
+    //    public override void drawGUI(Rect baseRect)
+    //    {
+    //        GUI.Label(new Rect(baseRect.xMin + 350, baseRect.yMin + 60, 240, 20), "Enter Payload Mass(t)");
+    //        UImass = Convert.ToSingle(GUI.TextField(new Rect(baseRect.xMin + 560, baseRect.yMin + 60, 50, 20), UImass.ToString()));
 
-            GUI.Label(new Rect(baseRect.xMin + 350, baseRect.yMin + 90, 240, 20), "Enter Acceleration (g)");
-            UIgee = Convert.ToSingle(GUI.TextField(new Rect(baseRect.xMin + 560, baseRect.yMin + 90, 50, 20), UIgee.ToString()));
+    //        GUI.Label(new Rect(baseRect.xMin + 350, baseRect.yMin + 90, 240, 20), "Enter Acceleration (g)");
+    //        UIgee = Convert.ToSingle(GUI.TextField(new Rect(baseRect.xMin + 560, baseRect.yMin + 90, 50, 20), UIgee.ToString()));
 
-        }
+    //    }
 
-        public override bool useWithSegment()
-        {
-            return false;
-        }
-        public override bool useWithStack()
-        {
-            return true;
-        }
+    //    public override bool useWithSegment()
+    //    {
+    //        return false;
+    //    }
+    //    public override bool useWithStack()
+    //    {
+    //        return true;
+    //    }
     }
-}
+

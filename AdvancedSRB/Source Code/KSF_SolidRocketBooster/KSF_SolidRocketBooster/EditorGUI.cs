@@ -15,6 +15,7 @@ using System.Linq;
 
 namespace KSF_SolidRocketBooster
 {
+    
     public class EditorGUI : MonoBehaviour
     {
 
@@ -24,8 +25,8 @@ namespace KSF_SolidRocketBooster
         protected Rect windowPos;
         private Rect GUImainRect = new Rect(10, 60, 660, 530);
 
-        private int GUImodeInt = 1;
-        private string[] GUImodeStrings = { "Vessel", "Stack", "Segments" };
+        private int GUImodeInt = 2;
+        private string[] GUImodeStrings = { "Vessel", " _ ", "Stacks" };
 
         private Vector2 segListVector = new Vector2(0, 0);
         private int segListLength = 0;
@@ -63,6 +64,8 @@ namespace KSF_SolidRocketBooster
         private Texture2D stackGraph;
 
         private string klipboard;
+
+        private AdvSRBNozzle SRB;
 
 
 
@@ -181,6 +184,12 @@ namespace KSF_SolidRocketBooster
 
 
             //select appropriate mode
+            if(GUImodeInt == 0)
+            {
+                vesselGUI();
+            }
+
+
             if (GUImodeInt == 1)
             {
                 stackGUI();
@@ -188,10 +197,104 @@ namespace KSF_SolidRocketBooster
 
             if (GUImodeInt == 2)
             {
-                segmentGUI(lNozzles[iNozzles].GetComponent<AdvSRBNozzle>());
+                segmentGUI();
             }
 
             GUI.DragWindow(new Rect(0, 0, 10000, 20));
+        }
+
+        private void vesselGUI()
+        {
+            List<Part> vesselList = new List<Part>();
+
+            EditorLogic e = EditorLogic.fetch;
+            vesselList = e.ship.parts;
+
+            
+
+            foreach (Part sP in vesselList)
+            {
+                
+            }
+
+            GUI.Label(new Rect(20 + GUImainRect.xMin, 20 + GUImainRect.yMin, 200, 20), "Nozzles Found: " + lNozzles.Count());
+            float[] totalFuelMass = new float[lNozzles.Count()];
+            float[] vacISP = new float[lNozzles.Count()];
+            float[] atmoISP = new float[lNozzles.Count()];
+
+            float liftOffThrust = 0;
+            float burnTime = 0;
+
+            float avgVacISP = 0;
+            float avgAtmoISP = 0;
+
+            float totFM = 0;
+
+            for (int i = 0; i < lNozzles.Count(); i++)
+            {
+                //Debug.Log("AdvSRB: 01");
+
+                lNozzles[i].GetComponent<AdvSRBNozzle>().StackSearchAndFuel();
+
+
+                totalFuelMass[i] = lNozzles[i].GetComponent<AdvSRBNozzle>().fullStackFuelMass;
+
+                totFM += totalFuelMass[i];
+
+                //Debug.Log("AdvSRB: 02");
+
+                atmoISP[i] = lNozzles[i].GetComponent<AdvSRBNozzle>().atmosphereCurve.Evaluate(1);
+
+                //Debug.Log("AdvSRB: 03");
+
+                vacISP[i] = lNozzles[i].GetComponent<AdvSRBNozzle>().atmosphereCurve.Evaluate(0);
+
+                //Debug.Log("AdvSRB: 04");
+
+                liftOffThrust +=  9.80665f * totalFuelMass[i] * atmoISP[i] * lNozzles[i].GetComponent<AdvSRBNozzle>().MassFlow.Evaluate(0.1f);
+
+                burnTime = Math.Max(lNozzles[i].GetComponent<AdvSRBNozzle>().estimateBurnDuration(), burnTime);
+
+
+
+                avgAtmoISP += totalFuelMass[i] * atmoISP[i];
+                avgVacISP += totalFuelMass[i] * vacISP[i];
+            }
+            avgAtmoISP = avgAtmoISP / totFM;
+            avgVacISP = avgVacISP / totFM;
+
+            //Debug.Log("AdvSRB: 05");
+
+            float totM = CalcVesselMass(vesselList);
+
+            //Debug.Log("AdvSRB: 06");
+
+
+            GUI.Label(new Rect(20 + GUImainRect.xMin, 40 + GUImainRect.yMin, 200, 20), "Atmo ISP: " + avgAtmoISP.ToString("N2"));
+            GUI.Label(new Rect(20 + GUImainRect.xMin, 60 + GUImainRect.yMin, 200, 20), "Vacuum ISP: " + avgVacISP.ToString("N2"));
+
+            GUI.Label(new Rect(20 + GUImainRect.xMin, 80 + GUImainRect.yMin, 200, 20), "Total SRB Fuel: " + (totFM * 1000).ToString("N2") +" kg");
+            GUI.Label(new Rect(20 + GUImainRect.xMin, 100 + GUImainRect.yMin, 200, 20), "Vessel Mass: " + (totM * 1000).ToString("N2") + " kg");
+
+            GUI.Label(new Rect(240 + GUImainRect.xMin, 80 + GUImainRect.yMin, 200, 20), "SRB Liftoff Thrust: " + (liftOffThrust).ToString("N2") + " kN");
+            GUI.Label(new Rect(240 + GUImainRect.xMin, 100 + GUImainRect.yMin, 200, 20), "Liftoff TWR: " + (liftOffThrust/totM/9.80665f).ToString("N2"));
+
+            GUI.Label(new Rect(20 + GUImainRect.xMin, 120 + GUImainRect.yMin, 200, 20), "Est Burn Duration: " + (burnTime).ToString("N0") + " s");
+
+            GUI.Label(new Rect(240 + GUImainRect.xMin, 40 + GUImainRect.yMin, 200, 20), "Atmo dV: " + (avgAtmoISP * 9.80665f * Math.Log(totM / (totM - totFM))).ToString("N2") + " m/s");
+            GUI.Label(new Rect(240 + GUImainRect.xMin, 60 + GUImainRect.yMin, 200, 20), "Vacuum dV: " + (avgVacISP * 9.80665f * Math.Log(totM / (totM - totFM))).ToString("N2") + " m/s");
+        }
+
+        private float CalcVesselMass(List<Part> vesselList)
+        {
+            float m = 0;
+
+            foreach (Part pc in vesselList)
+            {
+                if(pc.physicalSignificance == 0) m += pc.mass;
+                m += pc.GetResourceMass();
+            }
+            return m;
         }
 
         private void stackGUI()
@@ -248,7 +351,7 @@ namespace KSF_SolidRocketBooster
                 AdvSRBNozzle nozzle;
                 nozzle = lNozzles[iNozzles].GetComponent<AdvSRBNozzle>();
 
-                stackGraph = nozzle.stackThrustPredictPic(480, 640, Convert.ToInt16(simDuration), nozzle.atmosphereCurve);
+                //stackGraph = nozzle.stackThrustPredictPic(480, 640, Convert.ToInt16(simDuration), nozzle.atmosphereCurve);
             }
 
 
@@ -277,25 +380,25 @@ namespace KSF_SolidRocketBooster
         }
         
 
-        public void segmentGUI(AdvSRBNozzle nozzle)
+        public void segmentGUI()
         {
             if (DebugDetail > 0)
                 Debug.Log("AdvSRB: in segmentGUI");
 
             //this is the "Segment" mode of the GUI, which allows one to customize burn times for each segment
             string segGUIname = "";
-            AdvSRBSegment SRB;
+            //AdvSRBNozzle SRB;
 
             //must populate the buttons with the most current fuel sources
-            nozzle.FuelStackSearcher(nozzle.FuelSourcesList);
+            //nozzle.FuelStackSearcher(nozzle.FuelSourcesList);
 
             //set length of internal text box to be 50 pix per segment
-            segListLength = nozzle.FuelSourcesList.Count * 50;
+            segListLength = lNozzles.Count * 50;
 
             //automatically select first segment as current GUI
-            if (nozzle.FuelSourcesList.Count > 0 && segCurrentGUI == null)
+            if (lNozzles.Count > 0 && segCurrentGUI == null)
             {
-                segCurrentGUI = nozzle.FuelSourcesList[0];
+                segCurrentGUI = lNozzles[0];
                 iSegments = 0;
                 refreshNodeInfo = true;
             }
@@ -303,23 +406,27 @@ namespace KSF_SolidRocketBooster
             segListVector = GUI.BeginScrollView(new Rect(GUImainRect.xMin + 10, GUImainRect.yMin + 10, 120, 420), segListVector, new Rect(0, 0, 100, segListLength + 30));
 
             GUI.Label(new Rect(15, 0, 100, 15), "Nozzle End");
-            for (int i = 0; i < nozzle.FuelSourcesList.Count; i++)
+            for (int i = 0; i < lNozzles.Count; i++)
             {
-                SRB = nozzle.FuelSourcesList[i].GetComponent<AdvSRBSegment>();
-                if (SRB.GUIshortName != "")
-                    segGUIname = SRB.GUIshortName;
-                else
-                    segGUIname = "Unknown";
+                SRB = lNozzles[iSegments].GetComponent<AdvSRBNozzle>();
+                ////if (SRB.GUIshortName != "")
+                ////    segGUIname = SRB.GUIshortName;
+                ////else
+                segGUIname = "Unknown";
+
+                //segGUIname = SRB.name;
+
+                segGUIname = SRB.name;
 
 
                 if (i == iSegments)
                 {
                     if (GUI.Button(new Rect(5, i * 50 + 20, 95, 40),"* " + segGUIname))
                     {
-                        if (nozzle.FuelSourcesList[i] != segCurrentGUI)
+                        if (lNozzles[i] != segCurrentGUI)
                         {
                             segPriorGUI = segCurrentGUI;
-                            segCurrentGUI = nozzle.FuelSourcesList[i];
+                            segCurrentGUI = lNozzles[i];
                             refreshSegGraph = true;
                         }
                     }
@@ -328,10 +435,10 @@ namespace KSF_SolidRocketBooster
                 {
                     if (GUI.Button(new Rect(5, i * 50 + 20, 95, 40), segGUIname))
                     {
-                        if (nozzle.FuelSourcesList[i] != segCurrentGUI)
+                        if (lNozzles[i] != segCurrentGUI)
                         {
                             segPriorGUI = segCurrentGUI;
-                            segCurrentGUI = nozzle.FuelSourcesList[i];
+                            segCurrentGUI = lNozzles[i];
                             iSegments = i;
                             refreshSegGraph = true;
                         }
@@ -346,31 +453,31 @@ namespace KSF_SolidRocketBooster
             GUI.EndScrollView();
 
 
-            if (GUI.Button(new Rect(GUImainRect.xMin + 10, GUImainRect.yMin + 445, 120, 20), "Apply to Symmetry"))
-            {
-                AdvSRBSegment s;
-                AdvSRBSegment sb;
+            //if (GUI.Button(new Rect(GUImainRect.xMin + 10, GUImainRect.yMin + 445, 120, 20), "Apply to Symmetry"))
+            //{
+            //    AdvSRBSegment s;
+            //    AdvSRBSegment sb;
 
 
-                if (segCurrentGUI != null)
-                {
-                    s = segCurrentGUI.GetComponent<AdvSRBSegment>();
+            //    if (segCurrentGUI != null)
+            //    {
+            //        s = segCurrentGUI.GetComponent<AdvSRBSegment>();
 
-                    
 
-                    foreach(Part p in segCurrentGUI.symmetryCounterparts)
-                    {
-                        Debug.Log("Symmetry Found! " + p.partName);
 
-                        sb = p.GetComponent<AdvSRBSegment>();
+            //        foreach (Part p in segCurrentGUI.symmetryCounterparts)
+            //        {
+            //            Debug.Log("Symmetry Found! " + p.partName);
 
-                        sb.MassFlow = s.MassFlow;
+            //            sb = p.GetComponent<AdvSRBSegment>();
 
-                        sb.BurnProfile = s.BurnProfile;
-                    }
-                }
-                refreshNodeInfo = true;
-            }
+            //            sb.MassFlow = s.MassFlow;
+
+            //            sb.BurnProfile = s.BurnProfile;
+            //        }
+            //    }
+            //    refreshNodeInfo = true;
+            //}
 
 
             if (isAutoNode)
@@ -392,36 +499,40 @@ namespace KSF_SolidRocketBooster
                 }
             }
 
+            SRB = segCurrentGUI.GetComponent<AdvSRBNozzle>();
+
+            SRB.StackSearchAndFuel();
+
             //copy/paste functionality
-            if (segCurrentGUI != null)
-            {
-                SRB = segCurrentGUI.GetComponent<AdvSRBSegment>();
+            //if (segCurrentGUI != null)
+            //{
+            //    SRB = segCurrentGUI.GetComponent<AdvSRBSegment>();
 
-                if (GUI.Button(new Rect(GUImainRect.xMin + 10, GUImainRect.yMin + 500, 55, 20), "Copy"))
-                {
-                    klipboard = SRB.AnimationCurveToString(SRB.MassFlow);
-                }
+            //    if (GUI.Button(new Rect(GUImainRect.xMin + 10, GUImainRect.yMin + 500, 55, 20), "Copy"))
+            //    {
+            //        //klipboard = SRB.AnimationCurveToString(SRB.MassFlow);
+            //    }
 
-                if (GUI.Button(new Rect(GUImainRect.xMin + 75, GUImainRect.yMin + 500, 55, 20), "Paste"))
-                {
-                    SRB.MassFlow = SRB.AnimationCurveFromString(klipboard);
-                    SRB.BurnProfile = SRB.AnimationCurveToString(SRB.MassFlow);
+            //    if (GUI.Button(new Rect(GUImainRect.xMin + 75, GUImainRect.yMin + 500, 55, 20), "Paste"))
+            //    {
+            //        //SRB.MassFlow = SRB.AnimationCurveFromString(klipboard);
+            //        //SRB.BurnProfile = SRB.AnimationCurveToString(SRB.MassFlow);
 
-                    refreshNodeInfo = true;
-                    refreshSegGraph = true;
-                }
-            }
+            //        refreshNodeInfo = true;
+            //        refreshSegGraph = true;
+            //    }
+            //}
 
             int width = 0;
             if (segCurrentGUI != null)
             {
-                SRB = segCurrentGUI.GetComponent<AdvSRBSegment>();
+                //SRB = segCurrentGUI.GetComponent<AdvSRBSegment>();
                 width = SRB.MassFlow.length * 60;
                 if (refreshSegGraph)
                 {
                     System.Collections.Generic.List<Part> fSL = new System.Collections.Generic.List<Part>(); //filled once during OnActivate, is the master list
                     fSL.Add(segCurrentGUI);
-                    segGraph = nozzle.segThrustPredictPic(310, 490, Convert.ToInt16(simDuration), segCurrentGUI.GetComponent<AdvSRBSegment>(), segCurrentGUI.GetResourceMass(), segCurrentGUI.mass, 5, 5, fSL);
+                    segGraph = AdvSRBGraphUtils.stackThrustPredictPic(310, 490, Convert.ToInt16(simDuration), SRB.atmosphereCurve, SRB);
                     refreshSegGraph = false; ;
                 }
 
@@ -450,33 +561,38 @@ namespace KSF_SolidRocketBooster
 
                     autoTypeList[autoTypeCurrent].drawGUI(GUImainRect);
 
-                    if (autoTypeList[autoTypeCurrent].useWithSegment())
-                    {
-                        //this is the button to compute the segment values
-                        if (GUI.Button(new Rect(GUImainRect.xMin + 500, GUImainRect.yMin + 140, 150, 20), "Evaluate for Segment"))
-                        {
-                            SRB.MassFlow = autoTypeList[autoTypeCurrent].computeCurve(nozzle.atmosphereCurve, segCurrentGUI);
+                    ////if (autoTypeList[autoTypeCurrent].useWithSegment())
+                    ////{
+                    ////    this is the button to compute the segment values
+                    ////    if (GUI.Button(new Rect(GUImainRect.xMin + 500, GUImainRect.yMin + 140, 150, 20), "Evaluate for Segment"))
+                    ////    {
+                    ////        SRB.MassFlow = autoTypeList[autoTypeCurrent].computeCurve(nozzle.atmosphereCurve, segCurrentGUI);
 
-                            SRB.BurnProfile = SRB.AnimationCurveToString(SRB.MassFlow);
+                    ////        SRB.BurnProfile = SRB.AnimationCurveToString(SRB.MassFlow);
 
-                            refreshSegGraph = true;
-                        }
-                    }
+                    ////        refreshSegGraph = true;
+                    ////    }
+                    ////}
 
                     if (autoTypeList[autoTypeCurrent].useWithStack())
                     {
                         //this is the button to compute stack values
                         if (GUI.Button(new Rect(GUImainRect.xMin + 500, GUImainRect.yMin + 170, 150, 20), "Evaluate for Stack"))
                         {
-                            AdvSRBSegment s;
+                            //AdvSRBSegment s;
 
-                            foreach (Part p in nozzle.FuelSourcesList)
-                            {
-                                s = p.Modules.OfType<AdvSRBSegment>().FirstOrDefault();
 
-                                s.MassFlow = autoTypeList[autoTypeCurrent].computeCurve(nozzle.atmosphereCurve, p);
-                                s.BurnProfile = s.AnimationCurveToString(s.MassFlow);
-                            }
+                            SRB.MassFlow = autoTypeList[autoTypeCurrent].computeCurve(SRB.atmosphereCurve, SRB.fullStackFuelMass);
+                            SRB.BurnProfile = AdvSRBUtils.AnimationCurveToString(SRB.MassFlow);
+
+
+                            //foreach (Part p in nozzle.FuelSourcesList)
+                            //{
+                            //    //s = p.Modules.OfType<AdvSRBSegment>().FirstOrDefault();
+
+                            //    //s.MassFlow = autoTypeList[autoTypeCurrent].computeCurve(nozzle.atmosphereCurve, p);
+                            //    //s.BurnProfile = s.AnimationCurveToString(s.MassFlow);
+                            //}
 
                             refreshSegGraph = true;
                         }
@@ -488,7 +604,7 @@ namespace KSF_SolidRocketBooster
                     nodeListVector = GUI.BeginScrollView(new Rect(GUImainRect.xMin + 140, GUImainRect.yMin + 10, 510, 40), nodeListVector, new Rect(0, 0, width + 70, 22));
                     if (segCurrentGUI != null)
                     {
-                        SRB = segCurrentGUI.GetComponent<AdvSRBSegment>();
+                        SRB = segCurrentGUI.GetComponent<AdvSRBNozzle>();
 
                         for (int i = 0; i < SRB.MassFlow.length + 1; i++)
                         {
@@ -531,7 +647,7 @@ namespace KSF_SolidRocketBooster
 
                     if (segCurrentGUI != null && refreshNodeInfo)
                     {
-                        SRB = segCurrentGUI.GetComponent<AdvSRBSegment>();
+                        //SRB = segCurrentGUI.GetComponent<AdvSRBSegment>();
                         //lbMsgBox = "The currently selected segment is " + SRB.GUIshortName + " and the current node is Node " + (nodeNumber + 1); //removed May 4, 2014: asterisks make redundant
 
                         tbTime = SRB.MassFlow.keys[nodeNumber].time.ToString();
@@ -568,7 +684,7 @@ namespace KSF_SolidRocketBooster
 
                     
 
-                    GUI.Label(new Rect(GUImainRect.xMin + 140, GUImainRect.yMin + 60, 510, 15), convertMassFlowToThrust(Convert.ToSingle(tbValue), nozzle.atmosphereCurve, lbMsgBox));
+                    GUI.Label(new Rect(GUImainRect.xMin + 140, GUImainRect.yMin + 60, 510, 15), convertMassFlowToThrust(Convert.ToSingle(tbValue), SRB.atmosphereCurve, lbMsgBox));
 
 
                     simDuration = GUI.TextField(new Rect(140 + GUImainRect.xMin, 160 + GUImainRect.yMin, 40, 20), simDuration);
@@ -577,7 +693,7 @@ namespace KSF_SolidRocketBooster
                     //save node changes
                     if (segCurrentGUI != null)
                     {
-                        SRB = segCurrentGUI.GetComponent<AdvSRBSegment>();
+                        //SRB = segCurrentGUI.GetComponent<AdvSRBSegment>();
                         if (GUI.Button(new Rect(GUImainRect.xMin + 490, GUImainRect.yMin + 160, 160, 20), "Save Changes to Node"))
                         {
                             Keyframe k = new Keyframe();
@@ -589,7 +705,7 @@ namespace KSF_SolidRocketBooster
                             SRB.MassFlow.RemoveKey(nodeNumber);
                             SRB.MassFlow.AddKey(k);
 
-                            SRB.BurnProfile = SRB.AnimationCurveToString(SRB.MassFlow);
+                            SRB.BurnProfile = AdvSRBUtils.AnimationCurveToString(SRB.MassFlow);
                             refreshNodeInfo = true;
 
                             refreshSegGraph = true;
@@ -599,7 +715,7 @@ namespace KSF_SolidRocketBooster
                         {
                             SRB.MassFlow.SmoothTangents(nodeNumber, 1);
 
-                            SRB.BurnProfile = SRB.AnimationCurveToString(SRB.MassFlow);
+                            SRB.BurnProfile = AdvSRBUtils.AnimationCurveToString(SRB.MassFlow);
                         }
 
                         if (GUI.Button(new Rect(GUImainRect.xMin + 320, GUImainRect.yMin + 130, 160, 20), "Flat In Tan"))
@@ -612,7 +728,7 @@ namespace KSF_SolidRocketBooster
 
                             tbInTan = (deltaY / deltaX).ToString();
 
-                            SRB.BurnProfile = SRB.AnimationCurveToString(SRB.MassFlow);
+                            SRB.BurnProfile = AdvSRBUtils.AnimationCurveToString(SRB.MassFlow);
                         }
 
                         if (GUI.Button(new Rect(GUImainRect.xMin + 490, GUImainRect.yMin + 130, 160, 20), "Flat Out Tan"))
@@ -625,7 +741,7 @@ namespace KSF_SolidRocketBooster
 
                             tbOutTan = (deltaY / deltaX).ToString();
 
-                            SRB.BurnProfile = SRB.AnimationCurveToString(SRB.MassFlow);
+                            SRB.BurnProfile = AdvSRBUtils.AnimationCurveToString(SRB.MassFlow);
                         }
 
                         if (nodeNumber != 0)
@@ -634,7 +750,7 @@ namespace KSF_SolidRocketBooster
                             {
                                 SRB.MassFlow.RemoveKey(nodeNumber);
 
-                                SRB.BurnProfile = SRB.AnimationCurveToString(SRB.MassFlow);
+                                SRB.BurnProfile = AdvSRBUtils.AnimationCurveToString(SRB.MassFlow);
                                 refreshNodeInfo = true;
 
                                 refreshSegGraph = true;
@@ -654,7 +770,7 @@ namespace KSF_SolidRocketBooster
         private string convertMassFlowToThrust(float MassFlow, FloatCurve atmosphereCurve, string msgOut)
         {
             msgOut = "";
-            msgOut = "Atmosphere thrust at this node is " + (9.80665f * atmosphereCurve.Evaluate(1) * MassFlow) + "kN, vacuum thrust is " + (9.80665f * atmosphereCurve.Evaluate(0) * MassFlow) + "kN";
+            msgOut = "Atmosphere thrust at this node is " + (9.80665f * atmosphereCurve.Evaluate(1) * MassFlow * SRB.fullStackFuelMass) + "kN, vacuum thrust is " + (9.80665f * atmosphereCurve.Evaluate(0) * MassFlow * SRB.fullStackFuelMass) + "kN";
             return msgOut;
             ;
         }
@@ -684,6 +800,7 @@ namespace KSF_SolidRocketBooster
         }
 
     }
+     
 }
 
 

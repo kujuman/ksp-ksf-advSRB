@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Toolbar;
 
+
 namespace KSF_SolidRocketBooster
 {
     [KSPAddon(KSPAddon.Startup.EditorAny, false)]
@@ -26,7 +27,7 @@ namespace KSF_SolidRocketBooster
         private Editor_Controller()
         {
             tbButton = ToolbarManager.Instance.add("AdvSRB", "tbButton");
-            tbButton.TexturePath = "AdvSRB/tool_btn";
+            tbButton.TexturePath = "KerbalScienceFoundation/AdvSRB/tool_btn";
             tbButton.ToolTip = "Open/Close the AdvSRB thrust profiler";
             tbButton.Visibility = new GameScenesVisibility(GameScenes.EDITOR, GameScenes.SPH);
             tbButton.OnClick += (e) => ToggleController();
@@ -45,7 +46,7 @@ namespace KSF_SolidRocketBooster
 
             bEditorVisible = !bEditorVisible;
 
-            tbButton.TexturePath = bEditorVisible ? "AdvSRB/tool_btnX" : "AdvSRB/tool_btn";
+            tbButton.TexturePath = bEditorVisible ? "KerbalScienceFoundation/AdvSRB/tool_btnX" : "KerbalScienceFoundation/AdvSRB/tool_btn";
 
 
 
@@ -63,9 +64,9 @@ namespace KSF_SolidRocketBooster
                 eGUI.autoTypeList.Clear();
                 eGUI.autoTypeList.Add(new autoSeg_ThrustForDuration());
                 eGUI.autoTypeList.Add(new autoSeg_ThrustForThrust());
-                eGUI.autoTypeList.Add(new autoSeg_ThrustAtTime());
+                //eGUI.autoTypeList.Add(new autoSeg_ThrustAtTime());
                 eGUI.autoTypeList.Add(new autoSeg_ExtraThrustForDuration());
-                eGUI.autoTypeList.Add(new autoSeg_ExtraThrustForExtraThrustAtGee());
+                //eGUI.autoTypeList.Add(new autoSeg_ExtraThrustForExtraThrustAtGee());
             }
 
             if (!bEditorVisible)
