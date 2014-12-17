@@ -58,6 +58,7 @@
     <Compile Include="EditorGUI.cs" />
     <Compile Include="KSFAutoSRB.cs" />
     <Compile Include="EditorController.cs" />
+    <Compile Include="KSFModuleAnimateFuel.cs" />
     <Compile Include="KSF_SnippetTester.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="AdvSRBSegment.cs" />
@@ -66,7 +67,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>copy "$(TargetPath)" "C:\Users\Daniel\Desktop\KSP DEV\GameData\AdvSRB\Plugin\"
+    <PostBuildEvent>copy "$(TargetPath)" "C:\Users\Daniel\Documents\GitHub\ksp-ksf-advSRB\AdvancedSRB\KerbalScienceFoundation\AdvSRB\"
 </PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
