@@ -94,9 +94,9 @@ namespace KSF_SolidRocketBooster
 
             lNozzles.Clear();
 
-            lShip.Add(EditorLogic.startPod);
+            lShip.Add(EditorLogic.RootPart);
 
-            foreach (Part p in EditorLogic.startPod.FindChildParts<Part>(true))
+            foreach (Part p in EditorLogic.RootPart.FindChildParts<Part>(true))
             {
                 lShip.Add(p);
             }
@@ -369,12 +369,12 @@ namespace KSF_SolidRocketBooster
 
                 
 
-                p.SetHighlight(false);
+                p.SetHighlight(false,false);
             }
 
             foreach(Part p in colorList)
             {
-                p.SetHighlight(true);
+                p.SetHighlight(true,false);
             }
             colorList.Clear();
         }
